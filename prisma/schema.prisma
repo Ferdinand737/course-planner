@@ -11,10 +11,13 @@ model User {
   id    String @id @default(cuid())
   email String @unique
 
+  isAdmin Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   password Password?
+  coursePlans CoursePlan[]
 }
 
 model Password {
@@ -22,6 +25,39 @@ model Password {
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId String @unique
+}
+
+model CoursePlan {
+  id    String @id @default(cuid())
+  title String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  numTerms Int @default(8)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId String @unique
+
+  courses Course[] @relation("CoursePlanCourse")
+}
+
+
+model Course {
+  id              String        @id @default(cuid())
+  code            String
+  name            String
+  description     String?
+
+  winterTerm1     Boolean       @default(false)
+  winterTerm2     Boolean       @default(false)
+  summerTerm1     Boolean       @default(false)
+  summerTerm2     Boolean       @default(false)
+
+  durationTerms   Int           @default(1)
+  credits         Int           @default(3)
+  isHonours       Boolean       @default(false)
+
+  preRequisites   Json         @default("{}")
+  coursePlans     CoursePlan[]   @relation("CoursePlanCourse")
 }
 
 
