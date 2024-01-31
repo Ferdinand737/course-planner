@@ -8,10 +8,12 @@ const prisma = new PrismaClient();
 
 async function seed() {
 
+  await prisma.plannedCourse.deleteMany({});
   await prisma.course.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.password.deleteMany({});
   await prisma.coursePlan.deleteMany({});
+
 
 
   const email = "rachel@remix.run";
@@ -58,7 +60,7 @@ async function seed() {
       const summerTerm1 = availability.split(";")[2] === "1" ? true : false
       const summerTerm2 = availability.split(";")[3] === "1" ? true : false
 
-      await prisma.course.create({
+      const course = await prisma.course.create({
         data: {
           code: row.Code,
           name: row.Name,
@@ -73,13 +75,31 @@ async function seed() {
         },
       });
 
+      const equivalencies = row.Equivalences.split(";");
+      const exclusions = row.Exclusion.split(";");
+
+      const equivalentCourses = await prisma.course.findMany({where: {code: {in: equivalencies}}});
+      const excludedCourses = await prisma.course.findMany({where: {code: {in: exclusions}}});
+
+      await prisma.course.update({
+        where: { id: course.id },
+        data: {
+          equivalentCourses: {
+            connect: equivalentCourses.map(course => ({ id: course.id }))
+          },
+          excludedCourses: {
+            connect: excludedCourses.map(course => ({ id: course.id }))
+          }
+        }
+      });
+
     })
     .on("end", async () => {
       const courseCodes = ["COSC499", "COSC304", "COSC111", "COSC310", "MATH100", "COSC341", "COSC222", "MATH101"];
-
+      
       const courses = await prisma.course.findMany({where: {code: {in: courseCodes}}});
-
-      await prisma.coursePlan.create({
+    
+      const coursePlan = await prisma.coursePlan.create({
         data: {
           title: "Computer Science",
           user: {
@@ -87,8 +107,33 @@ async function seed() {
               id: user.id,
             },
           },
-          courses: {
-            connect: courses.map(course => ({ id: course.id })),
+        },
+      });
+    
+      const plannedCourses = await Promise.all(courses.map((course, index) => {
+        const term = Math.floor(Math.random() * coursePlan.numTerms) + 1;
+        return prisma.plannedCourse.create({
+          data: {
+            term,
+            course: {
+              connect: {
+                id: course.id
+              }
+            },
+            coursePlan: {
+              connect: {
+                id: coursePlan.id
+              }
+            }
+          }
+        });
+      }));
+    
+      await prisma.coursePlan.update({
+        where: { id: coursePlan.id },
+        data: {
+          plannedCourses: {
+            connect: plannedCourses.map(plannedCourse => ({ id: plannedCourse.id })),
           },
         },
       });

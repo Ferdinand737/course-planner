@@ -108,8 +108,8 @@ export function ErrorBoundary({ error }: { error: any }) {
   return (
     <Document title={""}>
       <Layout>
-        <h1>Error</h1>
-        <p>{error.message}</p>
+        {/* <h1>Error</h1>
+        <p>{error.message}</p> */}
       </Layout>
     </Document>
   )

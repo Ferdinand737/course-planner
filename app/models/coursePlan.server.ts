@@ -10,6 +10,12 @@ export function getUserCoursePlans(userId: string) {
 export function getUserCoursePlan(planId: string) {
   return prisma.coursePlan.findUnique({
     where: { id: planId },
-    include: { courses: true },
+    include: { 
+      plannedCourses: {
+        include: {
+          course: true
+        }
+      } 
+    },
   });
 }
