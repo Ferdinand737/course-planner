@@ -13,7 +13,12 @@ export function getUserCoursePlan(planId: string) {
     include: { 
       plannedCourses: {
         include: {
-          course: true
+          course: {
+            include: {
+              equivalentCourses: true,
+              excludedCourses: true,
+            }
+          }
         }
       } 
     },

@@ -97,7 +97,7 @@ async function seed() {
       
     }).on("end", async () => {
       await Promise.all(operations)
-      
+
       equivalencies.forEach(async (equivalency) => {
         const course = await prisma.course.findUnique({where: {id: equivalency.course}});
         const equivalentCourses = await prisma.course.findMany({where: {code: {in: equivalency.equivalencies}}});
@@ -123,7 +123,6 @@ async function seed() {
           }
         });
       })
-
 
       const courseCodes = ["COSC499", "COSC304", "COSC111", "COSC310", "MATH100", "COSC341", "COSC222", "MATH101"];
       
@@ -169,7 +168,6 @@ async function seed() {
       });
       
     })
-  
     console.log(`Database has been seeded. 🌱`);
 }
 
