@@ -130,6 +130,7 @@ async function seed() {
                 contains: "COSC",
             },
         },
+        take: 30,
       });
     
       const coursePlan = await prisma.coursePlan.create({
@@ -144,7 +145,19 @@ async function seed() {
       });
     
       const plannedCourses = await Promise.all(courses.map((course, index) => {
-        const term = Math.floor(Math.random() * coursePlan.numTerms) + 1;
+        let term = 1
+
+
+        if ( course.code.includes("C1")){
+          term = Math.floor(Math.random()*4)+1
+        } else if ( course.code.includes("C2")){
+          term = Math.floor(Math.random()*4)+5
+        } else if ( course.code.includes("C3")){
+          term = Math.floor(Math.random()*4)+9
+        }else if ( course.code.includes("C4")){
+          term = Math.floor(Math.random()*4)+13
+        }
+
         return prisma.plannedCourse.create({
           data: {
             term,

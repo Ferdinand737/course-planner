@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { PlannedCourse } from "@prisma/client";
 import { DragDropContext, Droppable, Draggable, DraggingStyle, NotDraggingStyle } from "react-beautiful-dnd";
 import { ArcherContainer, ArcherElement } from 'react-archer';
-import { c } from "vitest/dist/reporters-5f784f42";
 
 
 
@@ -145,14 +144,17 @@ export default function CoursePlan(){
 
         coursePlan?.plannedCourses.forEach(plannedCourse => {
             const preRequisites =  extractCourseValues(plannedCourse.course.preRequisites);
-                
-                if(preRequisites.includes(course.code)){
-                    thisCourseAPreRequisite.push(plannedCourse)
+
+            for(const preRequisite of preRequisites){
+                if (preRequisite.includes(course.code)) {
+                    thisCourseAPreRequisite.push(plannedCourse);
                 }
+            }
+                
+       
         });
 
         
-
         return(
             <Draggable
                 key={plannedCourse.id}
@@ -160,24 +162,28 @@ export default function CoursePlan(){
                 index={idx}
             >
                 {(provided, snapshot) => (
-                    <div 
-                    className="p-2 m-2 bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center"
-                    ref={provided.innerRef}
-                    {...provided.draggableProps}
-                    {...provided.dragHandleProps}
+                    <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
                     >
-                    <ArcherElement
-                    id={plannedCourse.id}
-                    relations={thisCourseAPreRequisite.map(plannedCourse => ({
-                        targetId: plannedCourse.id,
-                        targetAnchor: 'top', 
-                        sourceAnchor: 'bottom', 
-                        style: {strokeColor: '#34a4eb'},
-                    }))}
-                >
-                        <p>{course.code}</p>
-                </ArcherElement>
-                        </div>
+
+                        <ArcherElement
+                        id={plannedCourse.id}
+                        relations={thisCourseAPreRequisite.map(plannedCourse => ({
+                            targetId: plannedCourse.id,
+                            targetAnchor: 'top', 
+                            sourceAnchor: 'bottom', 
+                            style: {strokeColor: '#34a4eb'},
+                        }))}
+                        >
+                            <div 
+                                className="p-2 m-2 bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center"
+                            >
+                                <p>{course.code}</p>
+                            </div>
+                    </ArcherElement>
+                    </div>
                 )}
             </Draggable>
         )
