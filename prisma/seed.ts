@@ -124,9 +124,13 @@ async function seed() {
         });
       })
 
-      const courseCodes = ["COSC499", "COSC304", "COSC111", "COSC310", "MATH100", "COSC341", "COSC222", "MATH101"];
-      
-      const courses = await prisma.course.findMany({where: {code: {in: courseCodes}}});
+      const courses = await prisma.course.findMany({
+        where: {
+            code: {
+                contains: "COSC",
+            },
+        },
+      });
     
       const coursePlan = await prisma.coursePlan.create({
         data: {
