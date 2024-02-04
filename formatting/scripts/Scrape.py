@@ -1,18 +1,16 @@
-from lib2to3.pgen2 import driver
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException  
 import time
 import pandas as pd
-from selenium.webdriver.common.action_chains import ActionChains
 
 def scrape_classes():
 
-    df = pd.DataFrame(columns=['Campus','Year','Season','Department','Course code','Name','Description', 'Credits','Co-reqs-string','Restrictions','Pre-req string','winterTerm1','winterTerm2','summerTerm1','summerTerm2','durationTerms','URL'])
+    df = pd.DataFrame(columns=['Campus','Year','Season','Department','Course code','Name','Description', 'Credits','isHonours','Co-reqs-string','Restrictions','Pre-req string','winterTerm1','winterTerm2','summerTerm1','summerTerm2','durationTerms','URL'])
 
     browser = webdriver.Chrome()
     browser.get("https://courses.students.ubc.ca/cs/courseschedule")# Must be on UBC network to access this link or login with to UBC account
-    time.sleep(60) # uncomment this line if you are not on UBC network and need to login to UBC account
+    time.sleep(60) # this is here so that you can login to your UBC account if you are not on UBC network
    
     browser.find_element(By.XPATH,"//button[contains(text(),'Campus')]").click()
     time.sleep(1)
@@ -76,6 +74,9 @@ def scrape_classes():
                        pass
                     
                     name = browser.find_element(By.XPATH,"//h4").text
+
+                    isHonours = "Honours Thesis" in name
+
                     desc = browser.find_element(By.XPATH,"//div[@role = 'main']/descendant::p[1]").text
                     credits = browser.find_element(By.XPATH,"//p[contains(text(),'Credits:')]").text.split(':')[1]
 
@@ -125,7 +126,7 @@ def scrape_classes():
                             summerTerm2 = False
 
             
-                    df.loc[len(df.index)]=[string_campus, year, season, dept_code, course_num, name, desc, credits, co_req_str, restrictions, pre_req_str, winterTerm1, winterTerm2, summerTerm1, summerTerm2, durationTerms, url]
+                    df.loc[len(df.index)]=[string_campus, year, season, dept_code, course_num, name, desc, credits, isHonours, co_req_str, restrictions, pre_req_str, winterTerm1, winterTerm2, summerTerm1, summerTerm2, durationTerms, url]
                     print(f"Progress: {round((i/9657)*100, 2)}%", end='\r')
                     i +=1
                     
