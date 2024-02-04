@@ -1,9 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import csv from "csv-parser";
-import e from "express";
 import fs from "fs";
-import path from "path"; // Import the path module
+import path from "path"; 
 
 const prisma = new PrismaClient();
 
