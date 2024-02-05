@@ -9,5 +9,6 @@ node_modules
 /postgres-data
 
 venv/
+.vscode/
 
-DATA/
+nvm-node.sh

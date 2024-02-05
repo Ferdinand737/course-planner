@@ -53,7 +53,7 @@ model PlannedCourse {
 
 model Course {
   id              String        @id @default(cuid())
-  code            String
+  code            String        @unique
   name            String
   description     String?
 
@@ -63,58 +63,20 @@ model Course {
   summerTerm2     Boolean       @default(false)
 
   durationTerms   Int           @default(1)
-  credits         Int           @default(3)
+  credits         Float         @default(3)
   isHonours       Boolean       @default(false)
+
+  plannedCourses  PlannedCourse[]
 
   equivalentCourses Course[] @relation("EquivalentCourses")
   equivalentTo      Course[] @relation("EquivalentCourses")
 
+  coRequisiteCourses    Course[] @relation("CoRequisites")
+  coRequisiteOf   Course[] @relation("CoRequisites")
+
   excludedCourses Course[] @relation("ExcludedCourses")
   excludedBy      Course[] @relation("ExcludedCourses")
 
-  plannedCourses  PlannedCourse[]
-
- // Link to prerequisite groups instead of individual prerequisites
-  prerequisiteGroups PrerequisiteGroup[] @relation("CoursePrerequisiteGroups")
-
-  preRequisiteFor CoursePrerequisite[]
+  preRequisites   Json         @default("{}")
 }
 
-model PrerequisiteGroup {
-  id              String              @id @default(cuid())
-  courseId        String?             // Nullable if this is a nested group not directly associated with a course
-  course          Course?             @relation(fields: [courseId], references: [id], name: "CoursePrerequisiteGroups")
-  type            PrerequisiteGroupType
-  prerequisites   CoursePrerequisite[]
-  childGroups     PrerequisiteGroup[] @relation("ParentChild")
-  parentGroup     PrerequisiteGroup?  @relation("ParentChild", fields: [parentGroupId], references: [id])
-  parentGroupId   String?
-
-  // Additional fields can be added to support "n of" conditions, like minRequired
-  minRequired     Int?                // For "n of" conditions, specifies the minimum number of prerequisites that must be met
-}
-
-enum PrerequisiteGroupType {
-  AND
-  OR
-  N_OF // Represents "n of the following" conditions
-}
-
-model CoursePrerequisite {
-  id            String            @id @default(cuid())
-  groupId       String
-  group         PrerequisiteGroup @relation(fields: [groupId], references: [id])
-  type          PrerequisiteType
-  value         String            // For a course, this could be the course code; for other types, the appropriate value
-
-  // if type is COURSE, this field is required
-  course Course? @relation(fields: [courseId], references: [id])
-  courseId String?
-}
-
-enum PrerequisiteType {
-  COURSE
-  YEAR
-  CREDITS
-  DEPARTMENT_PERMISSION
-}

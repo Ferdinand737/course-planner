@@ -3,8 +3,48 @@ import bcrypt from "bcryptjs";
 import csv from "csv-parser";
 import fs from "fs";
 import path from "path"; 
+import { HelperCourse } from './seedHelper';
 
 const prisma = new PrismaClient();
+
+async function readCSV(csvPath: string): Promise<HelperCourse[]> {
+  return new Promise((resolve, reject) => {
+    let operations: any[] = []
+    let helperCourses: HelperCourse[] = []
+    
+    fs.createReadStream(csvPath)
+      .pipe(csv())
+      .on("data", (row) => {
+        const operation = async () => {
+          const helperCourse = new HelperCourse(row);
+          helperCourses.push(helperCourse)
+
+          await prisma.course.create({
+            data: {
+              code: helperCourse.code,
+              name: helperCourse.name,
+              description: helperCourse.description,
+              credits: helperCourse.credits,
+              isHonours: helperCourse.isHonours,
+              durationTerms: helperCourse.durationTerms,
+              winterTerm1: helperCourse.winterTerm1,
+              winterTerm2: helperCourse.winterTerm2,
+              summerTerm1: helperCourse.summerTerm1,
+              summerTerm2: helperCourse.summerTerm2,
+              preRequisites: helperCourse.pre_req_json as any,
+            },
+          });
+        }
+        operations.push(operation())
+      })
+      .on("end", () => {
+        Promise.all(operations).then(() => {
+          resolve(helperCourses);
+        }).catch(reject);
+      })
+      .on("error", reject);
+  });
+}
 
 async function seed() {
 
@@ -28,163 +68,89 @@ async function seed() {
     },
   });
 
-  const csvPath = path.resolve(__dirname, "./data/allcourses.csv");
-  let equivalencies: { course: string; equivalencies: string[]; }[] = []
-  let exclusions: { course: string; exclusions: string[]; }[] = []
+  const csvPath = path.resolve(__dirname, "../data-aquisition/courses.csv");
 
-  let operations: any[] = []
-  
-  fs.createReadStream(csvPath)
-    .pipe(csv())
-    .on("data", async (row) => {
-      const operation = async () => {
-        const preReqs = [row.Prereq1, row.Prereq2, row.Prereq3, row.Prereq4].filter((preReq) => preReq);
+  let helperCourses = await readCSV(csvPath)
 
-        const preRequisites = {
-          and: preReqs.map(preReq => ({
-            or: preReq.split(";").map((p: string | any[]) => {
-              if (p.length === 1) {
-                return { 
-                  type: "year",
-                  value: p
-                }
-              } else {
-                return { 
-                  type: "course", 
-                  value: p 
-                }
-              }
-            })
-          }))
+
+  helperCourses.forEach(async (helperCourse: HelperCourse) => {
+    const course = await prisma.course.findFirst({where: {code: { equals: helperCourse.code }}});
+    const equivalentCourses = await prisma.course.findMany({where: {code: {in: helperCourse.equ_arr}}});
+    const coReqCourses = await prisma.course.findMany({where: {code: {in: helperCourse.co_req_arr}}});
+    
+    await prisma.course.update({
+      where: { id: course?.id },
+      data: {
+        equivalentCourses: {
+          connect: equivalentCourses.map(course => ({ id: course.id }))
+        },
+        coRequisiteCourses: {
+          connect: coReqCourses.map(course => ({ id: course.id }))
         }
-          
-        const availability = row.Availability
-        const winterTerm1 = availability.split(";")[0] === "1" ? true : false
-        const winterTerm2 = availability.split(";")[1] === "1" ? true : false
-        const summerTerm1 = availability.split(";")[2] === "1" ? true : false
-        const summerTerm2 = availability.split(";")[3] === "1" ? true : false
-  
-        const course = await prisma.course.create({
-          data: {
-            code: row.Code,
-            name: row.Name,
-            description: row.Description,
-            winterTerm1,
-            winterTerm2,
-            summerTerm1,
-            summerTerm2,
-            credits: Number(row.Credits),
-            isHonours: row["Is Honours"] === "1" ? true : false,
-            preRequisites
-          },
-        });
-  
-        equivalencies.push(
-          {
-            course: course.id,
-            equivalencies: row.Equivalences.split(";")
-          }
-        );
-        exclusions.push(
-          {
-            course: course.id,
-            exclusions: row.Exclusion.split(";")
-          }
-        );
       }
-      operations.push(operation())
-      
-    }).on("end", async () => {
-      await Promise.all(operations)
+    });
+  })
 
-      equivalencies.forEach(async (equivalency) => {
-        const course = await prisma.course.findUnique({where: {id: equivalency.course}});
-        const equivalentCourses = await prisma.course.findMany({where: {code: {in: equivalency.equivalencies}}});
-        await prisma.course.update({
-          where: { id: course?.id },
-          data: {
-            equivalentCourses: {
-              connect: equivalentCourses.map(course => ({ id: course.id }))
-            }
-          }
-        });
-      })
-  
-      exclusions.forEach(async (exclusion) => {
-        const course = await prisma.course.findUnique({where: {id: exclusion.course}});
-        const excludedCourses = await prisma.course.findMany({where: {code: {in: exclusion.exclusions}}});
-        await prisma.course.update({
-          where: { id: course?.id },
-          data: {
-            excludedCourses: {
-              connect: excludedCourses.map(course => ({ id: course.id }))
-            }
-          }
-        });
-      })
 
-      const courses = await prisma.course.findMany({
-        where: {
-            code: {
-                contains: "COSC",
-            },
+  const sampleCourses = await prisma.course.findMany({
+    where: {
+        code: {
+            contains: "COSC",
         },
-        take: 30,
-      });
-    
-      const coursePlan = await prisma.coursePlan.create({
-        data: {
-          title: "Computer Science",
-          user: {
-            connect: {
-              id: user.id,
-            },
-          },
+    },
+    take: 30,
+  });
+
+  const coursePlan = await prisma.coursePlan.create({
+    data: {
+      title: "Computer Science",
+      user: {
+        connect: {
+          id: user.id,
         },
-      });
-    
-      const plannedCourses = await Promise.all(courses.map((course, index) => {
-        let term = 1
+      },
+    },
+  });
+
+  const plannedCourses = await Promise.all(sampleCourses.map((course, index) => {
+    let term = 1
 
 
-        if ( course.code.includes("C1")){
-          term = Math.floor(Math.random()*4)+1
-        } else if ( course.code.includes("C2")){
-          term = Math.floor(Math.random()*4)+5
-        } else if ( course.code.includes("C3")){
-          term = Math.floor(Math.random()*4)+9
-        }else if ( course.code.includes("C4")){
-          term = Math.floor(Math.random()*4)+13
+    if ( course.code.includes("C1")){
+      term = Math.floor(Math.random()*4)+1
+    } else if ( course.code.includes("C2")){
+      term = Math.floor(Math.random()*4)+5
+    } else if ( course.code.includes("C3")){
+      term = Math.floor(Math.random()*4)+9
+    }else if ( course.code.includes("C4")){
+      term = Math.floor(Math.random()*4)+13
+    }
+
+    return prisma.plannedCourse.create({
+      data: {
+        term,
+        course: {
+          connect: {
+            id: course.id
+          }
+        },
+        coursePlan: {
+          connect: {
+            id: coursePlan.id
+          }
         }
-
-        return prisma.plannedCourse.create({
-          data: {
-            term,
-            course: {
-              connect: {
-                id: course.id
-              }
-            },
-            coursePlan: {
-              connect: {
-                id: coursePlan.id
-              }
-            }
-          }
-        });
-      }));
-    
-      await prisma.coursePlan.update({
-        where: { id: coursePlan.id },
-        data: {
-          plannedCourses: {
-            connect: plannedCourses.map(plannedCourse => ({ id: plannedCourse.id })),
-          },
-        },
-      });
-      
-    })
-    console.log(`Database has been seeded. 🌱`);
+      }
+    });
+  }));
+  
+  await prisma.coursePlan.update({
+    where: { id: coursePlan.id },
+    data: {
+      plannedCourses: {
+        connect: plannedCourses.map(plannedCourse => ({ id: plannedCourse.id })),
+      },
+    },
+  });
 }
 
 seed()
