@@ -35,7 +35,7 @@ class OpenAIRequester {
                 const response = await this.sendRequestToOpenAI(setup, prompt);
                 return response; // Success, return the response
             } catch (error) {
-                console.error(`Attempt ${attempt + 1} failed`, error);
+                console.error(`Attempt ${attempt + 1} failed`);
                 if (attempt >= maxAttempts - 1) throw new Error("Maximum attempts reached, giving up.");
                 
                 // Proportional jitter: 10% to 20% of the current delay

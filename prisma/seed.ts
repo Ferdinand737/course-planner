@@ -55,8 +55,8 @@ async function seed() {
   await prisma.coursePlan.deleteMany({});
 
 
-  const email = "rachel@remix.run";
-  const hashedPassword = await bcrypt.hash("racheliscool", 10);
+  const email = "user@email.com";
+  const hashedPassword = await bcrypt.hash("password", 10);
   const user = await prisma.user.create({
     data: {
       email,
