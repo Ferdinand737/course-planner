@@ -180,8 +180,6 @@ export default function CoursePlan(){
         });
 
 
-            
-
         return(
             <>
             <Draggable
@@ -196,27 +194,28 @@ export default function CoursePlan(){
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
                         >
-                    <ArcherElement
+                        <ArcherElement
                             id={thisPlannedCourse.id}
-                            relations={thisCourseAPreRequisite.map((plannedCourse) => ({
-                                targetId: plannedCourse.id,
-                                targetAnchor: 'top',
-                                sourceAnchor: 'bottom',
-                                style: {
-                                    strokeColor: plannedCourse.id === hoveredCourseId || hoveredCourseId === thisPlannedCourse.id ? '#cb8cf5' : '#d3d3d3',
-                                },
-                            }))}
-                            >
-                        
+                            relations={thisCourseAPreRequisite.filter(plannedCourse => plannedCourse.id === hoveredCourseId || hoveredCourseId === thisPlannedCourse.id)
+                                .map((plannedCourse) => ({
+                                    targetId: plannedCourse.id,
+                                    targetAnchor: 'top',
+                                    sourceAnchor: 'bottom',
+                                    style: {
+                                        strokeColor: '#cb8cf5'
+                                    },
+                                }))
+                            }
+                        >
                             <div className="p-2 m-2 rounded-full w-18 h-18 flex items-center justify-center bg-blue-200" style={{ position: 'relative', zIndex: 1, backgroundColor: '#7ddcff' }}
                                 onMouseEnter={() => setHoveredCourseId(thisPlannedCourse.id)}
                                 onClick={() => setSelectedCourse(thisCourse)}
-                                //onMouseLeave={() => setHoveredCourseId(null)}  this line breaks dragging             
+                                // onMouseLeave={() => setHoveredCourseId(null)}  // this line breaks dragging             
                             >
                                 <p style={{ fontSize: '0.8rem' }}>{thisCourse.code}</p> 
                             </div>
-                     
                         </ArcherElement>
+
                     </div>
                 )}
             </Draggable>
