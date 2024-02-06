@@ -116,13 +116,15 @@ async function seed() {
     let term = 1
 
 
-    if ( course.code.includes("C1")){
+    if ( course.code.includes("C 1")){
       term = Math.floor(Math.random()*4)+1
-    } else if ( course.code.includes("C2")){
+    } else if ( course.code.includes("C 2")){
       term = Math.floor(Math.random()*4)+5
-    } else if ( course.code.includes("C3")){
+    } else if ( course.code.includes("C 3")){
       term = Math.floor(Math.random()*4)+9
-    }else if ( course.code.includes("C4")){
+    }else if ( course.code.includes("C 4")){
+      term = Math.floor(Math.random()*4)+13
+    }else if ( course.code.includes("C 5")){
       term = Math.floor(Math.random()*4)+13
     }
 
@@ -146,6 +148,7 @@ async function seed() {
   await prisma.coursePlan.update({
     where: { id: coursePlan.id },
     data: {
+      numTerms: 16,
       plannedCourses: {
         connect: plannedCourses.map(plannedCourse => ({ id: plannedCourse.id })),
       },

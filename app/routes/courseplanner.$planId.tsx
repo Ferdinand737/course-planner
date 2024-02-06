@@ -1,10 +1,8 @@
-import { useLoaderData } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import { PlannedCourse } from "@prisma/client";
-import { DragDropContext, Droppable, Draggable, DraggingStyle, NotDraggingStyle } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable} from "react-beautiful-dnd";
 import { ArcherContainer, ArcherElement } from 'react-archer';
-
-
+import { useLoaderData, Link, Outlet } from "@remix-run/react";
 
 
 export async function clientLoader({params}: {params: any}) {
@@ -20,6 +18,7 @@ export default function CoursePlan(){
     const [coursePlan, setCoursePlan] = useState(null); 
     const [loading, setLoading] = useState(true); 
     const [groupedCourses, setGroupedCourses] = useState([]);
+    const [hoveredCourseId, setHoveredCourseId] = useState<string>();
 
 
     const groupByTerm = (courses: PlannedCourse[], totalTerms: number): Record<number, PlannedCourse[]> => {
@@ -52,9 +51,31 @@ export default function CoursePlan(){
         }
     }, [coursePlan]);
 
-
-
+    useEffect(() => {
+        async function postCoursePlan(){
+            // Update coursePlan with new plannedCourses before posting
+            const updatedCoursePlan = {
+                ...coursePlan, // Spread existing coursePlan to maintain other properties
+                plannedCourses: groupedCourses.flat() // Update plannedCourses with flattened groupedCourses
+            };
     
+            const response = await fetch(`/coursePlanAPI/${id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                // Send the updated coursePlan in the request body
+                body: JSON.stringify({coursePlan: updatedCoursePlan})
+            });
+            const data = await response.json();
+        }
+        if(groupedCourses && coursePlan){
+            postCoursePlan();
+        }
+    },[groupedCourses, coursePlan]); 
+
+
+
 
     if(loading){
         return(
@@ -75,6 +96,15 @@ export default function CoursePlan(){
         
         return result;
     };
+
+    function updateTermNumbers(newGroupedCourses: PlannedCourse[][]){
+        for(let i = 0; i < newGroupedCourses.length; i++){
+            for(let j = 0; j < newGroupedCourses[i].length; j++){
+                newGroupedCourses[i][j].term = i + 1;
+            }
+        }
+        return newGroupedCourses;
+    }
 
 
     const reorder = (list: PlannedCourse[], startIndex: number, endIndex: number) => {
@@ -99,48 +129,41 @@ export default function CoursePlan(){
             const items = reorder(groupedCourses[sInd], source.index, destination.index);
             const newState = [...groupedCourses];
             newState[sInd] = items;
-            setGroupedCourses(newState);
+            setGroupedCourses(updateTermNumbers(newState));
         } else {
             const result = move(groupedCourses[sInd], groupedCourses[dInd], source, destination);
-            const newState = [...groupedCourses];
+            const newState =[...groupedCourses];
             newState[sInd] = result[sInd];
             newState[dInd] = result[dInd];
     
-            setGroupedCourses(newState);
+            setGroupedCourses(updateTermNumbers(newState));
         }
     }
-            
-
+   
 
     function RenderCourse(props:{ plannedCourse: PlannedCourse, idx: number }){
 
         function extractCourseValues(node) {
             let courses = [];
-            
-            // Check if node itself is a leaf of type course
-            if (node.type === "course") {
+            // Check if node itself is a leaf of type COURSE
+            if (node.type === "LEAF" && node.subtype === "COURSE") {
                 return [node.value];
             }
-            
-            // If node has 'and' or 'or', recursively search within
-            for (const key of Object.keys(node)) {
-                if (key === "and" || key === "or") {
-                    for (const child of node[key]) {
-                        courses = courses.concat(extractCourseValues(child));
-                    }
-                }
-            }
-            
+            // Recursively search through child nodes if they exist
+            if (node.childNodes && node.childNodes.length > 0) {
+                node.childNodes.forEach(child => {
+                    courses = courses.concat(extractCourseValues(child));
+                });
+            }   
             return courses;
         }
-
-
-
+        
+ 
         const { plannedCourse, idx } = props;
 
         const course  = plannedCourse.course;
 
-        const thisCourseAPreRequisite = []
+        const thisCourseAPreRequisite: PlannedCourse[] = []
 
         coursePlan?.plannedCourses.forEach(plannedCourse => {
             const preRequisites =  extractCourseValues(plannedCourse.course.preRequisites);
@@ -150,42 +173,54 @@ export default function CoursePlan(){
                     thisCourseAPreRequisite.push(plannedCourse);
                 }
             }
-                
-       
         });
 
+        let arrowColor = '#d3d3d3'
         
+        
+        if(thisCourseAPreRequisite.includes(hoveredCourseId) || hoveredCourseId === plannedCourse.id){
+            arrowColor = '#cb8cf5'
+        }
+            
+
         return(
+            <>
             <Draggable
                 key={plannedCourse.id}
                 draggableId={plannedCourse.id}
                 index={idx}
+                
             >
                 {(provided, snapshot) => (
                     <div
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                    >
-
-                        <ArcherElement
-                        id={plannedCourse.id}
-                        relations={thisCourseAPreRequisite.map(plannedCourse => ({
-                            targetId: plannedCourse.id,
-                            targetAnchor: 'top', 
-                            sourceAnchor: 'bottom', 
-                            style: {strokeColor: '#34a4eb'},
-                        }))}
                         >
-                            <div 
-                                className="p-2 m-2 bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center"
+                    <ArcherElement
+                            id={plannedCourse.id}
+                            relations={thisCourseAPreRequisite.map((plannedCourse) => ({
+                                targetId: plannedCourse.id,
+                                targetAnchor: 'top',
+                                sourceAnchor: 'bottom',
+                                style: {
+                                    strokeColor: arrowColor,
+                                },
+                            }))}
                             >
-                                <p>{course.code}</p>
+                        <Link to={`${course.id}`}>
+                            <div className="p-2 m-2 rounded-full w-18 h-18 flex items-center justify-center bg-blue-200" style={{ position: 'relative', zIndex: 1, backgroundColor: '#7ddcff' }}
+                            onMouseEnter={() => setHoveredCourseId(plannedCourse.id)}
+                            //onMouseLeave={() => setHoveredCourseId(null)}  this line breaks dragging             
+                            >
+                                <p style={{ fontSize: '0.8rem' }}>{course.code}</p> 
                             </div>
-                    </ArcherElement>
+                        </Link>
+                        </ArcherElement>
                     </div>
                 )}
             </Draggable>
+            </>
         )
     }
     
@@ -197,32 +232,40 @@ export default function CoursePlan(){
         const showYear = idx % 4 === 0;
 
         return(
-            <>
-                {showYear && 
-                
-                <h1 className="font-bold text-lg mt-2">
-                    Year: {year}
-                </h1>
-                }
+                <>
+                {showYear && (
+                    <div className="flex items-baseline space-x-2 mt-4 mb-2">
+                    <h1 className="text-xl font-semibold text-gray-800">
+                        Year {year}
+                    </h1>
+                    </div>
+                )}
                 <Droppable
                     key={idx}
                     droppableId={`${idx}`}
                     direction="horizontal"
                 >
                     {(provided, snapshot) => (
-                        <div 
-                        className="p-4 border-b flex flex-col md:flex-row justify-between w-full h-[100px]" 
+                    <div 
+                        className={`p-4 border-b flex ${snapshot.isDraggingOver ? 'bg-gray-100' : 'bg-white'} flex-col md:flex-row justify-between w-full h-auto shadow-md rounded-lg`}
                         ref={provided.innerRef}
-                            {...provided.droppableProps}
-                        >
-                            <h1 className="font-bold text-lg">{termNames[(absoluteTerm - 1) % 4]}</h1>
-                            <div className="flex flex-wrap justify-center space-x-20 w-full">
-                                {term.map((plannedCourse, idx) => (
-                                    <RenderCourse key={plannedCourse.id} plannedCourse={plannedCourse} idx={idx} />
-                                ))}
-                            </div>
-                            {provided.placeholder}
+                        {...provided.droppableProps}
+                    >
+                        <div className="flex items-baseline space-x-1">
+                        <h1 className="text-lg font-semibold text-blue-600">
+                            {termNames[(absoluteTerm - 1) % 4].split(" ")[0]}
+                        </h1>
+                        <h1 className="text-lg font-semibold text-blue-600">
+                            {termNames[(absoluteTerm - 1) % 4].split(" ")[1]}
+                        </h1>
                         </div>
+                        <div className="flex flex-wrap justify-center gap-5 w-full">
+                        {term.map((plannedCourse, idx) => (
+                            <RenderCourse key={plannedCourse.id} plannedCourse={plannedCourse} idx={idx} />
+                        ))}
+                        </div>
+                        {provided.placeholder}
+                    </div>
                     )}
                 </Droppable>
             </>
@@ -230,10 +273,10 @@ export default function CoursePlan(){
     }
 
 
-    return(
-        <>
-            <div>
-                <ArcherContainer strokeColor="red">
+    return (
+        <div className="flex h-full min-h-screen"> 
+            <div className="flex-1"> 
+                <ArcherContainer>
                     <DragDropContext onDragEnd={onDragEnd}>
                         <div>
                             {groupedCourses.map((term, idx) => (
@@ -243,8 +286,12 @@ export default function CoursePlan(){
                     </DragDropContext>
                 </ArcherContainer>
             </div>
-        </>
+            <div className="w-80">
+                <Outlet/>
+            </div>
+        </div>
     );
+    
 }
 
 
