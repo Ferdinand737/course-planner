@@ -3,7 +3,9 @@
 
 ## Initial Setup
 
-[Node Version Manager (nvm)](https://github.com/nvm-sh/nvm) is recomended
+[Node Version Manager (nvm)](https://github.com/nvm-sh/nvm) is recomended.
+
+**Node 21** was used for project creation and development
 
 - Start the Postgres Database in [Docker](https://www.docker.com/get-started):
 
@@ -17,6 +19,12 @@
 
   ```sh
   npm run setup
+  ```
+
+- Install packages:
+
+  ```sh
+  npm i
   ```
 
 - Run the first build:
