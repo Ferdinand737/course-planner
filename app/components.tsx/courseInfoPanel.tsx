@@ -1,13 +1,4 @@
-import { json, useLoaderData } from "@remix-run/react";
-import { useEffect, useState } from "react";
-import { getCourse } from "~/models/course.server";
-
-
-
-export async function clientLoader({params}: {params: any}) {
-    // This is just here to force client side rendering and get the planId
-    return params.courseId;
-};
+import { Course } from "@prisma/client";
 
 const cardStyle = {
     padding: '20px',
@@ -16,29 +7,8 @@ const cardStyle = {
     borderRadius: '8px',
 };
 
-export default function CourseInfoPanel() {
-    const courseId = useLoaderData();
-
-    const [course, setCourse] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        async function fetchCoursePlan() {
-            const response = await fetch(`/courseAPI/${courseId}`); 
-            const data = await response.json();
-            setCourse(data.course);
-            setLoading(false); 
-        }
-        fetchCoursePlan();
-    }, []);
-
-    if(loading){
-        return(
-            <h1>Loading...</h1>
-        )
-    }
-
-
+export default function CourseInfoPanel(props: { course: Course }) {
+    const { course } = props;
 
     const terms = [
         course.winterTerm1 ? 'Winter Term 1' : '',
@@ -46,6 +16,8 @@ export default function CourseInfoPanel() {
         course.summerTerm1 ? 'Summer Term 1' : '',
         course.summerTerm2 ? 'Summer Term 2' : '',
     ].filter(Boolean).join(', ');
+
+    console.log(course);
 
     return (
         <div style={cardStyle}>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { PlannedCourse } from "@prisma/client";
+import { Course, PlannedCourse } from "@prisma/client";
 import { DragDropContext, Droppable, Draggable} from "react-beautiful-dnd";
 import { ArcherContainer, ArcherElement } from 'react-archer';
-import { useLoaderData, Link, Outlet } from "@remix-run/react";
+import { useLoaderData } from "@remix-run/react";
+import CourseInfoPanel from "~/components.tsx/courseInfoPanel";
 
 
 export async function clientLoader({params}: {params: any}) {
@@ -19,6 +20,8 @@ export default function CoursePlan(){
     const [loading, setLoading] = useState(true); 
     const [groupedCourses, setGroupedCourses] = useState([]);
     const [hoveredCourseId, setHoveredCourseId] = useState<string>();
+    const [selectedCourse, setSelectedCourse] = useState<Course>();
+
 
 
     const groupByTerm = (courses: PlannedCourse[], totalTerms: number): Record<number, PlannedCourse[]> => {
@@ -159,9 +162,10 @@ export default function CoursePlan(){
         }
         
  
-        const { plannedCourse, idx } = props;
+        const { idx } = props;
+        const  thisPlannedCourse  = props.plannedCourse
 
-        const course  = plannedCourse.course;
+        const thisCourse  = thisPlannedCourse.course;
 
         const thisCourseAPreRequisite: PlannedCourse[] = []
 
@@ -169,25 +173,20 @@ export default function CoursePlan(){
             const preRequisites =  extractCourseValues(plannedCourse.course.preRequisites);
 
             for(const preRequisite of preRequisites){
-                if (preRequisite.includes(course.code)) {
+                if (preRequisite.includes(thisCourse.code)) {
                     thisCourseAPreRequisite.push(plannedCourse);
                 }
             }
         });
 
-        let arrowColor = '#d3d3d3'
-        
-        
-        if(thisCourseAPreRequisite.includes(hoveredCourseId) || hoveredCourseId === plannedCourse.id){
-            arrowColor = '#cb8cf5'
-        }
+
             
 
         return(
             <>
             <Draggable
-                key={plannedCourse.id}
-                draggableId={plannedCourse.id}
+                key={thisPlannedCourse.id}
+                draggableId={thisPlannedCourse.id}
                 index={idx}
                 
             >
@@ -198,24 +197,25 @@ export default function CoursePlan(){
                         {...provided.dragHandleProps}
                         >
                     <ArcherElement
-                            id={plannedCourse.id}
+                            id={thisPlannedCourse.id}
                             relations={thisCourseAPreRequisite.map((plannedCourse) => ({
                                 targetId: plannedCourse.id,
                                 targetAnchor: 'top',
                                 sourceAnchor: 'bottom',
                                 style: {
-                                    strokeColor: arrowColor,
+                                    strokeColor: plannedCourse.id === hoveredCourseId || hoveredCourseId === thisPlannedCourse.id ? '#cb8cf5' : '#d3d3d3',
                                 },
                             }))}
                             >
-                        <Link to={`${course.id}`}>
+                        
                             <div className="p-2 m-2 rounded-full w-18 h-18 flex items-center justify-center bg-blue-200" style={{ position: 'relative', zIndex: 1, backgroundColor: '#7ddcff' }}
-                            onMouseEnter={() => setHoveredCourseId(plannedCourse.id)}
-                            //onMouseLeave={() => setHoveredCourseId(null)}  this line breaks dragging             
+                                onMouseEnter={() => setHoveredCourseId(thisPlannedCourse.id)}
+                                onClick={() => setSelectedCourse(thisCourse)}
+                                //onMouseLeave={() => setHoveredCourseId(null)}  this line breaks dragging             
                             >
-                                <p style={{ fontSize: '0.8rem' }}>{course.code}</p> 
+                                <p style={{ fontSize: '0.8rem' }}>{thisCourse.code}</p> 
                             </div>
-                        </Link>
+                     
                         </ArcherElement>
                     </div>
                 )}
@@ -286,9 +286,11 @@ export default function CoursePlan(){
                     </DragDropContext>
                 </ArcherContainer>
             </div>
-            <div className="w-80">
-                <Outlet/>
-            </div>
+            {selectedCourse && (
+                <div className="w-80">
+                    <CourseInfoPanel course={selectedCourse}/>
+                </div>
+            )}
         </div>
     );
     
