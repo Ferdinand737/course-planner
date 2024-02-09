@@ -88,7 +88,7 @@ export default function App() {
             </div>
           </div>
         </nav>
-        <div className="container">{children}</div>
+        <div className="container max-w-none px-0">{children}</div>
       </>
     );
   }

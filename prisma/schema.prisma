@@ -27,6 +27,35 @@ model Password {
   userId String @unique
 }
 
+// model Degree {
+//   id    String @id @default(cuid())
+//   name  String
+
+//   requirements RequirementGroup[]
+// }
+
+// model Requirement {
+//   id    String @id @default(cuid())
+//   name  String
+
+//   requirementString String
+
+//   requirementJson   Json         @default("{}")
+
+//   requirementGroup RequirementGroup @relation(fields: [requirementGroupId], references: [id])
+//   requirementGroupId String
+// }
+
+// model RequirementGroup {
+//   id    String @id @default(cuid())
+//   name  String
+
+//   requirements Requirement[]
+
+//   degree Degree @relation(fields: [degreeId], references: [id])
+//   degreeId String
+// }
+
 model CoursePlan {
   id    String @id @default(cuid())
   title String
