@@ -1,0 +1,4 @@
+CreditConstraintType,Credits,Year,Alternatives,ProgramSpecific,ElecGroup,IneligibleMajors,ReadIfHonours,Notes
+AT_LEAST,18,-1,ELEC_UL_CHEM,,,,,
+AT_LEAST,3,-1,CHEM201;CHEM210,,,,,
+AT_LEAST,12,-1,CHEM203;CHEM204;CHEM211;CHEM220,,,,,

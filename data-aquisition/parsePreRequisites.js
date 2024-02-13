@@ -10,7 +10,7 @@ const pipelineAsync = promisify(pipeline);
 
 async function addPreReqs() {
     const requester = new OpenAIRequester();
-    const csvPath = path.resolve(__dirname, "courses.csv");
+    const csvPath = path.resolve(__dirname, "data/courses.csv");
 
     let newRows = [];
 

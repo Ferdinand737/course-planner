@@ -1,0 +1,3 @@
+CreditConstraintType,Credits,Year,Alternatives,ProgramSpecific,ElecGroup,IneligibleMajors,ReadIfHonours,Notes
+AT_LEAST,30,-1,ELEC_PSYO,,,,,
+AT_LEAST,12,-1,ELEC_UL_PSYO,,,,,

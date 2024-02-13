@@ -31,11 +31,11 @@ def save(df):
         'winter_term_2': 'any',
         'summer_term_1': 'any',
         'summer_term_2': 'any',
-        'duration_terms': 'first'
-        'pre_req_json': 'first',
+        'duration_terms': 'first',
+        'pre_req_json': 'first'
     }).reset_index()
 
-    df.to_csv("courses.csv")
+    df.to_csv("data/courses.csv")
 
 
 def scrape_classes():

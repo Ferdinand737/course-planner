@@ -1,0 +1,4 @@
+CreditConstraintType,Credits,Year,Alternatives,ProgramSpecific,ElecGroup,IneligibleMajors,ReadIfHonours,Notes
+AT_LEAST,6,-1,STAT203;STAT205,,,,,
+AT_LEAST,9,-1,ELEC_UL_STAT,,,,,
+AT_LEAST,18,-1,ELEC_UL_STAT_DATA,,,,,

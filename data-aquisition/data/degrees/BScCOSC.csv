@@ -1,0 +1,27 @@
+CreditConstraintType,Credits,Year,Alternatives,ProgramSpecific,ElecGroup,IneligibleMajors,ReadIfHonours,Notes,,
+AT_LEAST,3,1,COSC111;COSC123,1,ELEC,,,,,first course(s) is(are) recommended by univ
+AT_LEAST,3,1,COSC121,1,,,,,,ProgramSpecific column is used to determine if double counting is allowed. Rule: can double count up to 6 credits from upper level program specific requirements.
+AT_LEAST,6,1,ENGL109;ENGL112;ENGL113;ENGL114;ENGL150;ENGL151;ENGL153;ENGL154;ENGL155;ENGL156;CORH203;CORH205;APSC176;APSC201,,ELEC,,,,,DoubleCount column is redundant?? we can get it by upperLevel && programSpecific. What about COSC 499??
+AT_LEAST,3,1,MATH100,,,,,,,ElecGroup - not sure what this is
+AT_LEAST,3,1,MATH101;MATH103,,ELEC,,,,,ReadIfHonours - whether or not a row should be read depending on the specialization type - major or honours
+AT_LEAST,3,1,PHYS111;PHYS112,,ELEC,,,,,
+AT_LEAST,9,1,ELEC,,,,,,,
+AT_LEAST,3,2,COSC211,1,,,,,,
+AT_LEAST,3,2,COSC221,1,,,,,,
+AT_LEAST,3,2,COSC222,1,,,,,,
+AT_LEAST,3,2,MATH221,1,,,,,,
+AT_LEAST,3,2,STAT230,1,,,,,,
+AT_LEAST,15,2,ELEC,,,,,,,
+AT_LEAST,3,3,COSC320,1,,,,,,
+AT_LEAST,3,3,COSC304,1,,,,,,
+AT_LEAST,3,3,COSC310,1,,,,,,
+AT_LEAST,3,3,COSC341,1,,,,,,
+AT_LEAST,3,3,PHIL331,1,,,,,,
+AT_LEAST,6,3,ELEC_UL_COSC,1,,,,,,
+AT_LEAST,9,3,ELEC,,,,,,,
+AT_LEAST,6,4,COSC499,1,,,,,,
+AT_LEAST,6,4,COSC449,1,,,1,,,
+AT_LEAST,12,4,ELEC_UL_COSC,1,,,0,,,
+AT_LEAST,6,4,ELEC_UL_COSC,1,,,1,,,
+AT_LEAST,3,4,ELEC_UL,,,,,,,
+AT_LEAST,9,4,ELEC,,,,,,,
