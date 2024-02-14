@@ -1,3 +1,8 @@
+import { Course, Faculty, Prisma, Requirement, RequirementType, SpecializationType } from "@prisma/client";
+import { query } from "express";
+import { P, al } from "vitest/dist/reporters-5f784f42";
+import { prisma } from "~/db.server";
+
 export class HelperCourse{
     code: string;
     name: string;
@@ -9,6 +14,7 @@ export class HelperCourse{
     winterTerm2: boolean;
     summerTerm1: boolean;
     summerTerm2: boolean;
+    faculty: Faculty;
     equ_str: string;
     co_req_str: string;
     pre_req_str: string;
@@ -30,6 +36,82 @@ export class HelperCourse{
         this.summerTerm1 = row["summer_term_1"] === "True" ? true : false
         this.summerTerm2 = row["summer_term_2"] === "True" ? true : false
 
+        const science = [
+            "APSC",
+            "ASTR",
+            "BIOC",
+            "BIOL",
+            "CHEM",
+            "COSC",
+            "DATA",
+            "EESC",
+            "ENGR",
+            "GISC",
+            "HES",
+            "HINT",
+            "MANF",
+            "MATH",
+            "PHYS",
+            "PSYO",
+            "STAT",
+        ]
+
+        const arts = [
+            "ANTH",
+            "ARTH",
+            "CCS",
+            "CHIN",
+            "CORH",
+            "CRWR",
+            "CULT",
+            "CUST",
+            "DICE",
+            "DIHU",
+            "EADM",
+            "EAP",
+            "ECED",
+            "ECON",
+            "EDLL",
+            "EDST",
+            "EDUC",
+            "ENGL",
+            "EPSE",
+            "ETEC",
+            "FILM",
+            "FREN",
+            "GEOG",
+            "GERM",
+            "GWST",
+            "HEAL",
+            "HIST",
+            "INDG",
+            "INLG",
+            "JPST",
+            "KORN",
+            "LATN",
+            "LLED",
+            "MDST",
+            "MGMT",
+            "NLEK",
+            "NRSG",
+            "NSYL",
+            "PHIL",
+            "POLI",
+            "SECH",
+            "SOCI",
+            "SOCW",
+            "SPAN",
+            "STMC",
+            "SUST",
+            "THTR",
+            "VISA",
+            "WRLD",
+        ]
+
+        const foundFaculty = row["course_code"].split(" ")[0]
+
+        this.faculty = science.includes(foundFaculty) ? Faculty.SCI : arts.includes(foundFaculty) ? Faculty.ART : Faculty.OTHER
+
         this.equ_str = row["equivalent_string"] ?? ""
         this.co_req_str = row["co-req_string"] ?? ""
         this.pre_req_str = row["pre-req_string"] ?? ""
@@ -43,5 +125,115 @@ export class HelperCourse{
         }catch(e){
             this.pre_req_json = JSON.parse("{}")
         }
+    }
+}
+
+export class HelperRequirement{
+    constraintType: RequirementType
+    credits: number
+    year: number
+    programSpecific: boolean
+    alternativeString: string
+    alternatives: Course[]
+
+
+    constructor(row:any){
+        this.constraintType = RequirementType.AT_LEAST
+        this.credits = Number(row["Credits"])
+        this.year = Number(row["Year"])
+        this.programSpecific = row["ProgramSpecific"] === "1" ? true : false
+
+        this.alternativeString = row["Alternatives"]
+
+        this.alternatives = []
+        
+    }
+    async populateAlternatives(){
+        let alternatives = this.alternativeString.split(";")
+
+        let alternativeCourses:Course[] = []
+
+        if(alternatives.length > 0){
+            for(const alternative of alternatives){
+                const courseCodeWithSpace = alternative.replace(/([A-Za-z])(\d)/g, '$1 $2');
+                const course = await prisma.course.findUnique({
+                    where: { code: courseCodeWithSpace }
+                });
+                if (course) {
+                    alternativeCourses.push(course);
+                }
+            }
+
+        } else {
+            const queries = this.alternativeString.replace("ELEC",'').split("_");
+            prisma.course.findMany().then(async (alternativeCourses) => {
+                for(const q of queries){
+                    let queryResults: Course[] = [];
+                    if (q === "UL") {
+                        queryResults = await this.findUpperLevelCourses();
+                    }
+                    else if (q === "SCI") {
+                        queryResults = await this.findScienceCourses();
+                    }
+                    else if (q === "NONSCI") {
+                        queryResults = await this.findArtsCourses();
+                    }
+                    else if (q.length === 4) {
+                        queryResults = await this.findDiciplineCourses(q);
+                    }
+                    else if (q.length === 1 && /^\d$/.test(q)) {
+                        queryResults = await this.findYearCourses(Number(q));
+                    }
+                    else{
+                        console.log("Unknown query" + q)
+                    }
+                    
+                    alternativeCourses = alternativeCourses.filter((course) => {
+                        return queryResults.some((queryCourse) => {
+                            return queryCourse.code === course.code;
+                        });
+                    })
+                }
+                this.alternatives = alternativeCourses
+            });
+        }
+        this.alternatives = alternativeCourses
+    }
+
+    async findUpperLevelCourses():Promise<Course[]>{
+        const query = Prisma.sql`
+            SELECT * FROM "Course"
+            WHERE "code" ~ '^[A-Z]{4}\\s[34]'
+        `;
+        const courses = await prisma.$queryRaw<Course[]>(query);
+        return courses;
+    }
+
+    async findYearCourses(year:number):Promise<Course[]>{
+        const query = Prisma.sql`
+            SELECT * FROM "Course"
+            WHERE "code" ~ '^[A-Z]{4}\\s${year}'
+        `;
+        const courses = await prisma.$queryRaw<Course[]>(query);
+        return courses
+    }
+
+
+    async findScienceCourses(){
+        return await prisma.course.findMany({
+            where: { faculty: Faculty.SCI }
+        });
+    }
+
+    async findArtsCourses(){
+        return await prisma.course.findMany({
+            where: { faculty: Faculty.ART }
+        });
+    }
+
+    async findDiciplineCourses(discipline:string){
+        return await prisma.course.findMany({
+            where: { code: { startsWith: discipline } }
+        });
     }
 }

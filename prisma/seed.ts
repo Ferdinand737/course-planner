@@ -1,13 +1,14 @@
-import { PrismaClient } from "@prisma/client";
+import { DegreeType, PrismaClient, SpecializationType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import csv from "csv-parser";
 import fs from "fs";
 import path from "path"; 
-import { HelperCourse } from './seedHelper';
+import { HelperCourse, HelperRequirement } from './seedHelper';
 
 const prisma = new PrismaClient();
 
-async function readCSV(csvPath: string): Promise<HelperCourse[]> {
+async function readCoursesCSV(): Promise<HelperCourse[]> {
+  const csvPath = path.resolve(__dirname, "../data-aquisition/data/courses.csv");
   return new Promise((resolve, reject) => {
     let operations: any[] = []
     let helperCourses: HelperCourse[] = []
@@ -31,6 +32,7 @@ async function readCSV(csvPath: string): Promise<HelperCourse[]> {
               winterTerm2: helperCourse.winterTerm2,
               summerTerm1: helperCourse.summerTerm1,
               summerTerm2: helperCourse.summerTerm2,
+              faculty: helperCourse.faculty,
               preRequisites: helperCourse.pre_req_json as any,
             },
           });
@@ -46,6 +48,58 @@ async function readCSV(csvPath: string): Promise<HelperCourse[]> {
   });
 }
 
+function parseSpecializationFromFileName(fileName: string) {
+  const parts = fileName.split('-');
+  const discipline = parts[1];
+  let rawType = parts[2].split('.')[0].toUpperCase();
+  
+  let specializationType: SpecializationType = rawType === "MAJOR" ? SpecializationType.MAJOR : SpecializationType.MINOR;
+
+  return { discipline, specializationType };
+}
+
+async function readSpecializationsCSVs() {
+  const directoryPath = path.resolve(__dirname, "../data-aquisition/data/degrees");
+  const fileNames = fs.readdirSync(directoryPath);
+
+  for (const fileName of fileNames) {
+    const { discipline, specializationType } = parseSpecializationFromFileName(fileName);
+    const specialization = await prisma.specialization.create({
+      data: {
+        discipline,
+        specializationType,
+      },
+    });
+
+    fs.createReadStream(`${directoryPath}/${fileName}`)
+      .pipe(csv())
+      .on('data', async (row) => {
+        const helperRequirement = new HelperRequirement(row);
+        await helperRequirement.populateAlternatives();
+
+        await prisma.requirement.create({
+          data: {
+            constraintType: helperRequirement.constraintType,
+            credits: helperRequirement.credits,
+            year: helperRequirement.year,
+            programSpecific: helperRequirement.programSpecific,
+            alternatives: {
+              connect: helperRequirement.alternatives.map(course => ({ id: course.id })),
+            },
+            specialization:{
+              connect: {
+                id: specialization.id
+              }
+            }
+          },
+        });
+      })
+      .on('end', () => {
+        console.log(`Processed ${fileName}`);
+      });
+  }
+}
+
 async function seed() {
 
   await prisma.plannedCourse.deleteMany({});
@@ -53,6 +107,8 @@ async function seed() {
   await prisma.user.deleteMany({});
   await prisma.password.deleteMany({});
   await prisma.coursePlan.deleteMany({});
+  await prisma.requirement.deleteMany({});
+  await prisma.specialization.deleteMany({});
 
 
   const email = "user@email.com";
@@ -68,9 +124,8 @@ async function seed() {
     },
   });
 
-  const csvPath = path.resolve(__dirname, "../data-aquisition/courses.csv");
 
-  let helperCourses = await readCSV(csvPath)
+  let helperCourses = await readCoursesCSV()
 
 
   helperCourses.forEach(async (helperCourse: HelperCourse) => {
@@ -91,6 +146,25 @@ async function seed() {
     });
   })
 
+  await readSpecializationsCSVs();
+
+  const specialization = await prisma.specialization.findFirst({
+    where: {
+      discipline: "COSC",
+      specializationType: SpecializationType.MAJOR,
+    },
+  })
+  
+  const degree = await prisma.degree.create({
+    data: {
+      degreeType: DegreeType.BSc,
+      specializations: {
+        connect: {
+         id: specialization?.id,
+        },
+      },
+    },
+  });
 
   const sampleCourses = await prisma.course.findMany({
     where: {
@@ -107,6 +181,11 @@ async function seed() {
       user: {
         connect: {
           id: user.id,
+        },
+      },
+      degree: {
+        connect: {
+          id: degree?.id,
         },
       },
     },

@@ -28,33 +28,47 @@ model Password {
 }
 
 enum DegreeType {
-  BA
   BSc
+  BA
 }
 model Degree {
-  id         String     @id @default(cuid())
-  name       String
+  id   String @id @default(cuid())
+
   degreeType DegreeType
+  specializations Specialization[] @relation("DegreeSpecializations")
+
+  CoursePlan CoursePlan[]
+}
+
+enum SpecializationType {
+  MAJOR
+  MINOR
+}
+model Specialization {
+  id         String @id @default(cuid())
+
+  specializationType    SpecializationType
   discipline String
 
   requirements Requirement[]
-  CoursePlan   CoursePlan[]
-}
 
+  degree   Degree[] @relation("DegreeSpecializations")
+}
 
 enum RequirementType {
   AT_LEAST
 }
+
 model Requirement {
   id              String          @id @default(cuid())
   constraintType  RequirementType @default(AT_LEAST)
   credits         Int
   year            Int
   programSpecific Boolean         @default(false)
-  courses         Course[]        @relation("CourseRequirements")
+  alternatives    Course[]        @relation("CourseRequirements")
 
-  degree   Degree @relation(fields: [degreeId], references: [id])
-  degreeId String
+  specialization   Specialization? @relation(fields: [specializationId], references: [id])
+  specializationId String?
 }
 
 model CoursePlan {
@@ -83,6 +97,11 @@ model PlannedCourse {
   coursePlanId String
 }
 
+enum Faculty {
+  SCI
+  ART
+  OTHER
+}
 model Course {
   id          String  @id @default(cuid())
   code        String  @unique
@@ -97,6 +116,8 @@ model Course {
   durationTerms Int     @default(1)
   credits       Float   @default(3)
   isHonours     Boolean @default(false)
+
+  faculty Faculty
 
   requirements Requirement[] @relation("CourseRequirements")
 
