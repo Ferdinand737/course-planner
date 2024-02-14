@@ -1,4 +1,4 @@
-import { DegreeType, PrismaClient, SpecializationType } from "@prisma/client";
+import { Course, DegreeType, PlannedCourse, PrismaClient, SpecializationType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import csv from "csv-parser";
 import fs from "fs";
@@ -153,6 +153,13 @@ async function seed() {
       discipline: "COSC",
       specializationType: SpecializationType.MAJOR,
     },
+    include:{
+      requirements: {
+        include: {
+          alternatives: true
+        }
+      }
+    }
   })
   
   const degree = await prisma.degree.create({
@@ -166,18 +173,11 @@ async function seed() {
     },
   });
 
-  const sampleCourses = await prisma.course.findMany({
-    where: {
-        code: {
-            contains: "COSC",
-        },
-    },
-    take: 30,
-  });
 
   const coursePlan = await prisma.coursePlan.create({
     data: {
       title: "Computer Science",
+      numTerms: 16,
       user: {
         connect: {
           id: user.id,
@@ -191,48 +191,45 @@ async function seed() {
     },
   });
 
-  const plannedCourses = await Promise.all(sampleCourses.map((course, index) => {
-    let term = 1
 
-
-    if ( course.code.includes("C 1")){
-      term = Math.floor(Math.random()*4)+1
-    } else if ( course.code.includes("C 2")){
-      term = Math.floor(Math.random()*4)+5
-    } else if ( course.code.includes("C 3")){
-      term = Math.floor(Math.random()*4)+9
-    }else if ( course.code.includes("C 4")){
-      term = Math.floor(Math.random()*4)+13
-    }else if ( course.code.includes("C 5")){
-      term = Math.floor(Math.random()*4)+13
-    }
-
-    return prisma.plannedCourse.create({
-      data: {
-        term,
-        course: {
-          connect: {
-            id: course.id
-          }
-        },
-        coursePlan: {
-          connect: {
-            id: coursePlan.id
-          }
+  for (const requirement of specialization?.requirements ?? []) {
+    if (requirement.alternatives.length > 0) {
+      const numCourses = requirement.credits / 3;
+      const randomAlternatives = [...requirement.alternatives].sort(() => 0.5 - Math.random()).slice(0, numCourses) as Course[];
+      await Promise.all(randomAlternatives.map((course) => {
+        const baseTermNumber = (requirement.year - 1) * 4;
+        let term;
+        
+        if (course.winterTerm1) {
+          term = baseTermNumber + 1;
+        } else if (course.winterTerm2) {
+          term = baseTermNumber + 2;
+        } else if (course.summerTerm1) {
+          term = baseTermNumber + 3;
+        } else if (course.summerTerm2) {
+          term = baseTermNumber + 4;
+        } else {
+          term = baseTermNumber + 1;
         }
-      }
-    });
-  }));
-  
-  await prisma.coursePlan.update({
-    where: { id: coursePlan.id },
-    data: {
-      numTerms: 16,
-      plannedCourses: {
-        connect: plannedCourses.map(plannedCourse => ({ id: plannedCourse.id })),
-      },
-    },
-  });
+
+        return prisma.plannedCourse.create({
+          data: {
+            term,
+            course: {
+              connect: {
+                id: course.id
+              }
+            },
+            coursePlan: {
+              connect: {
+                id: coursePlan.id
+              }
+            }
+          }
+        });
+      }))
+    }
+  }
 }
 
 seed()

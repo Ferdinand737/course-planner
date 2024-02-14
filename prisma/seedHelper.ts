@@ -1,6 +1,4 @@
-import { Course, Faculty, Prisma, Requirement, RequirementType, SpecializationType } from "@prisma/client";
-import { query } from "express";
-import { P, al } from "vitest/dist/reporters-5f784f42";
+import { Course, Faculty, Prisma, RequirementType } from "@prisma/client";
 import { prisma } from "~/db.server";
 
 export class HelperCourse{
@@ -145,15 +143,15 @@ export class HelperRequirement{
 
         this.alternativeString = row["Alternatives"]
 
-        this.alternatives = []
-        
+        this.alternatives = []   
     }
+    
     async populateAlternatives(){
-        let alternatives = this.alternativeString.split(";")
-
+        
         let alternativeCourses:Course[] = []
-
-        if(alternatives.length > 0){
+        
+        if(!this.alternativeString.includes("ELEC")){
+            let alternatives = this.alternativeString.split(";")
             for(const alternative of alternatives){
                 const courseCodeWithSpace = alternative.replace(/([A-Za-z])(\d)/g, '$1 $2');
                 const course = await prisma.course.findUnique({
@@ -165,7 +163,7 @@ export class HelperRequirement{
             }
 
         } else {
-            const queries = this.alternativeString.replace("ELEC",'').split("_");
+            const queries = this.alternativeString.split("_").filter((q) => q !== "" && q !== "ELEC").map((q) => q.trim());
             prisma.course.findMany().then(async (alternativeCourses) => {
                 for(const q of queries){
                     let queryResults: Course[] = [];
@@ -185,7 +183,7 @@ export class HelperRequirement{
                         queryResults = await this.findYearCourses(Number(q));
                     }
                     else{
-                        console.log("Unknown query" + q)
+                        console.log("Unknown query:" + q)
                     }
                     
                     alternativeCourses = alternativeCourses.filter((course) => {
@@ -217,7 +215,6 @@ export class HelperRequirement{
         const courses = await prisma.$queryRaw<Course[]>(query);
         return courses
     }
-
 
     async findScienceCourses(){
         return await prisma.course.findMany({
