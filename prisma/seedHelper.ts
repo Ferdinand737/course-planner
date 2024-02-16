@@ -145,14 +145,13 @@ export class HelperRequirement{
 
         this.alternatives = []   
     }
+
+    async populateAlternatives() {
+        let alternativeCourses:Course[] = [];
     
-    async populateAlternatives(){
-        
-        let alternativeCourses:Course[] = []
-        
-        if(!this.alternativeString.includes("ELEC")){
-            let alternatives = this.alternativeString.split(";")
-            for(const alternative of alternatives){
+        if (!this.alternativeString.includes("ELEC")) {
+            const alternatives = this.alternativeString.split(";");
+            for (const alternative of alternatives) {
                 const courseCodeWithSpace = alternative.replace(/([A-Za-z])(\d)/g, '$1 $2');
                 const course = await prisma.course.findUnique({
                     where: { code: courseCodeWithSpace }
@@ -161,41 +160,34 @@ export class HelperRequirement{
                     alternativeCourses.push(course);
                 }
             }
-
+            this.alternatives = alternativeCourses;
         } else {
-            const queries = this.alternativeString.split("_").filter((q) => q !== "" && q !== "ELEC").map((q) => q.trim());
-            prisma.course.findMany().then(async (alternativeCourses) => {
-                for(const q of queries){
-                    let queryResults: Course[] = [];
-                    if (q === "UL") {
-                        queryResults = await this.findUpperLevelCourses();
-                    }
-                    else if (q === "SCI") {
-                        queryResults = await this.findScienceCourses();
-                    }
-                    else if (q === "NONSCI") {
-                        queryResults = await this.findArtsCourses();
-                    }
-                    else if (q.length === 4) {
-                        queryResults = await this.findDiciplineCourses(q);
-                    }
-                    else if (q.length === 1 && /^\d$/.test(q)) {
-                        queryResults = await this.findYearCourses(Number(q));
-                    }
-                    else{
-                        console.log("Unknown query:" + q)
-                    }
-                    
-                    alternativeCourses = alternativeCourses.filter((course) => {
-                        return queryResults.some((queryCourse) => {
-                            return queryCourse.code === course.code;
-                        });
-                    })
+            const queries = this.alternativeString.split("_").filter(q => q !== "" && q !== "ELEC").map(q => q.trim());
+            let alternativeCourses = await prisma.course.findMany();
+            for (const q of queries) {
+                let queryResults:Course[] = [];
+                if (q === "UL") {
+                    queryResults = await this.findUpperLevelCourses();
+                } else if (q === "SCI") {
+                    queryResults = await this.findScienceCourses();
+                } else if (q === "NONSCI") {
+                    queryResults = await this.findArtsCourses();
+                } else if (q.length === 4) {
+                    queryResults = await this.findDiciplineCourses(q);
+                } else if (q.length === 1 && /^\d$/.test(q)) {
+                    queryResults = await this.findYearCourses(Number(q));
+                } else {
+                    console.log("Unknown query:" + q);
                 }
-                this.alternatives = alternativeCourses
-            });
+    
+                alternativeCourses = alternativeCourses.filter(course => {
+                    return queryResults.some(queryCourse => {
+                        return queryCourse.code === course.code;
+                    });
+                });
+            }
+            this.alternatives = alternativeCourses;
         }
-        this.alternatives = alternativeCourses
     }
 
     async findUpperLevelCourses():Promise<Course[]>{

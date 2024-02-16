@@ -1,5 +1,5 @@
 
-import { Course, CoursePlan, PlannedCourse } from "@prisma/client";
+import { Course, CoursePlan, DegreeType, PlannedCourse, Specialization } from "@prisma/client";
 import { prisma } from "~/db.server";
 
 
@@ -25,6 +25,40 @@ export function getCoursePlan(planId: string) {
     },
   });
 }
+
+export async function createCoursePlan(planName: string, major: Specialization, minor: Specialization, userId: string) {
+  const degree = await prisma.degree.create({
+    data: {
+      degreeType: DegreeType.BSc,
+      specializations: {
+        connect: [
+          { id: major.id },
+          { id: minor.id },
+        ],
+      },
+    },
+  });
+
+
+  const coursePlan = await prisma.coursePlan.create({
+    data: {
+      title: planName,
+      numTerms: 16,
+      user: {
+        connect: {
+          id: userId,
+        },
+      },
+      degree: {
+        connect: {
+          id: degree?.id,
+        },
+      },
+    },
+  });
+}
+
+
 export async function setCoursePlan(coursePlanData: any) {
   const { id, title, numTerms, plannedCourses } = coursePlanData.coursePlan;
 

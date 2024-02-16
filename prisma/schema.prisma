@@ -31,10 +31,11 @@ enum DegreeType {
   BSc
   BA
 }
-model Degree {
-  id   String @id @default(cuid())
 
-  degreeType DegreeType
+model Degree {
+  id String @id @default(cuid())
+
+  degreeType      DegreeType
   specializations Specialization[] @relation("DegreeSpecializations")
 
   CoursePlan CoursePlan[]
@@ -44,15 +45,18 @@ enum SpecializationType {
   MAJOR
   MINOR
 }
-model Specialization {
-  id         String @id @default(cuid())
 
-  specializationType    SpecializationType
-  discipline String
+model Specialization {
+  id String @id @default(cuid())
+
+  name String
+
+  specializationType SpecializationType
+  discipline         String
 
   requirements Requirement[]
 
-  degree   Degree[] @relation("DegreeSpecializations")
+  degree Degree[] @relation("DegreeSpecializations")
 }
 
 enum RequirementType {
@@ -81,7 +85,7 @@ model CoursePlan {
   degreeId  String
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId String @unique
+  userId String 
 
   plannedCourses PlannedCourse[]
 }
@@ -102,6 +106,7 @@ enum Faculty {
   ART
   OTHER
 }
+
 model Course {
   id          String  @id @default(cuid())
   code        String  @unique
