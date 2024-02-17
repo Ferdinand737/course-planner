@@ -44,6 +44,7 @@ model Degree {
 enum SpecializationType {
   MAJOR
   MINOR
+  HONOURS
 }
 
 model Specialization {

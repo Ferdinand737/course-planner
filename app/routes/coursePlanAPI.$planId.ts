@@ -10,6 +10,6 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
 };
 
 export const action = async({ params, request }: { params: any, request: Request }) => { 
-    const requestBody = await json(request);
+    const requestBody = await request.json();
     return await setCoursePlan(requestBody)
 }
