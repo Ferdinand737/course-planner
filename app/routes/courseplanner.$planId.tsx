@@ -3,7 +3,7 @@ import { Course, PlannedCourse } from "@prisma/client";
 import { DragDropContext, Droppable, Draggable} from "react-beautiful-dnd";
 import { ArcherContainer, ArcherElement } from 'react-archer';
 import { useLoaderData } from "@remix-run/react";
-import CourseInfoPanel from "~/components.tsx/courseInfoPanel";
+import CourseInfoPanel from "~/components/courseInfoPanel";
 
 
 export async function clientLoader({params}: {params: any}) {
@@ -31,6 +31,7 @@ export default function CoursePlan(){
         }
       
         return courses.reduce((acc: Record<number, PlannedCourse[]>, course: PlannedCourse) => {
+            console.log(course);
           acc[course.term].push(course);
           return acc;
         }, initialAcc);

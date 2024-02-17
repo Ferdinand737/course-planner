@@ -1,5 +1,6 @@
 
-import { Course, CoursePlan, DegreeType, PlannedCourse, Specialization } from "@prisma/client";
+import { Course, CoursePlan, DegreeType, PlannedCourse, Requirement, Specialization } from "@prisma/client";
+import e from "express";
 import { prisma } from "~/db.server";
 
 
@@ -32,7 +33,8 @@ export function getCoursePlan(planId: string) {
 }
 
 
-export async function createCoursePlan(planName: string, major: Specialization, minor: Specialization, userId: string) {
+export async function createCoursePlan(planName: string, major: Specialization & { requirements: Requirement[] }, minor: Specialization & { requirements: Requirement[] }, userId: string) {
+  
   const degree = await prisma.degree.create({
     data: {
       degreeType: DegreeType.BSc,
@@ -61,48 +63,110 @@ export async function createCoursePlan(planName: string, major: Specialization, 
       },
     },
   });
+  
+  let plannedCourses: PlannedCourse[] = [];
 
   for (const specialization of [major, minor]){
 
-    for (const requirement of specialization?.requirements ?? []) {
-      if (requirement.alternatives.length > 0) {
-        const numCourses = requirement.credits / 3;
-        const randomAlternatives = [...requirement.alternatives].sort(() => 0.5 - Math.random()).slice(0, numCourses) as Course[];
-        await Promise.all(randomAlternatives.map(async (course) => {
-          const baseTermNumber = (requirement.year - 1) * 4;
-          let term;
-          
-          if (course.winterTerm1) {
-            term = baseTermNumber + 1;
-          } else if (course.winterTerm2) {
-            term = baseTermNumber + 2;
-          } else if (course.summerTerm1) {
-            term = baseTermNumber + 3;
-          } else if (course.summerTerm2) {
-            term = baseTermNumber + 4;
-          } else {
-            term = baseTermNumber + 1;
-          }
-  
-          await prisma.plannedCourse.create({
-            data: {
-              term,
-              course: {
-                connect: {
-                  id: course.id
-                }
-              },
-              coursePlan: {
-                connect: {
-                  id: coursePlan.id
-                }
-              }
+    const requirements = specialization?.requirements;
+
+
+    for (const requirement of requirements) {
+      const credits = requirement.credits;
+      if (requirement.alternatives?.length > 0) {
+        let creditsInAlternatives = requirement.alternatives?.reduce((accumulator, alternative) => accumulator + alternative.credits, 0);
+        if (creditsInAlternatives == credits){
+          for (const alternative of requirement.alternatives) {
+            let year = requirement.year;
+
+            if(requirement.year < 0){
+              year = Math.floor(Math.random() * (4 - 2 + 1)) + 2;
             }
-          });
-        }))
+
+            const baseTermNumber = (year - 1) * 4;
+            let term;
+            
+            if (alternative.winterTerm1) {
+              term = baseTermNumber + 1;
+            } else if (alternative.winterTerm2) {
+              term = baseTermNumber + 2;
+            } else if (alternative.summerTerm1) {
+              term = baseTermNumber + 3;
+            } else if (alternative.summerTerm2) {
+              term = baseTermNumber + 4;
+            } else {
+              term = baseTermNumber + 1;
+            }
+
+
+            const plannedCourse = await prisma.plannedCourse.create({
+              data: {
+                term,
+                course: {
+                  connect: {
+                    id: alternative.id,
+                  },
+                },
+                coursePlan: {
+                  connect: {
+                    id: coursePlan.id,
+                  },
+                },
+              },
+              include:{
+                course: true
+              }
+            });
+            plannedCourses.push(plannedCourse);
+          }
+        }
       }
     }
   }
+
+
+  for (const plannedCourse of plannedCourses) {
+    let thisCourseTerm = plannedCourse.term;
+    let plannedCoursePreReqs = plannedCoursesFromCodes(extractCourseValues(plannedCourse.course.preRequisites), coursePlan);
+    let latestPreReqTerm = Math.max(...plannedCoursePreReqs.map(preReq => preReq.term));
+    if (latestPreReqTerm >= thisCourseTerm) {
+      let newTerm = latestPreReqTerm + 1; 
+      await prisma.plannedCourse.update({
+        where: { id: plannedCourse.id },
+        data: {
+          term: newTerm,
+        },
+      });
+    }
+  }
+  
+}
+
+function extractCourseValues(node: any) {
+  let courseCodes:String[] = [];
+  if (node.type === "LEAF" && node.subtype === "COURSE") {
+      return [node.value];
+  }
+  if (node.childNodes && node.childNodes.length > 0) {
+      node.childNodes.forEach((child: any) => {
+        courseCodes = courseCodes.concat(extractCourseValues(child));
+      });
+  }   
+  return courseCodes;
+}
+
+function plannedCoursesFromCodes(courseCodes: String[], coursePlan: CoursePlan) {
+  let planned: PlannedCourse[] = []
+  courseCodes.map(async (courseCode) => {
+    const course = await prisma.course.findFirst({where: {code: courseCode}});
+    if (course) {
+      const plannedCourse = await prisma.plannedCourse.findFirst({where: {courseId: course.id, coursePlanId: coursePlan.id}});
+      if (plannedCourse) {
+        planned.push(plannedCourse);
+      }
+    }
+  });
+  return planned;
 }
 
 

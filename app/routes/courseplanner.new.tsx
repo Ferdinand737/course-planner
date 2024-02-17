@@ -31,9 +31,27 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
     }
 
     
-    
-    const major = await prisma.specialization.findUnique({where: {id: majorId}});
-    const minor = await prisma.specialization.findUnique({where: {id: minorId}});
+    const major = await prisma.specialization.findUnique({
+        where: {id: majorId},
+        include: {
+            requirements:{
+                include:{
+                    alternatives: true,
+                }
+            },
+        }
+    });
+
+    const minor = await prisma.specialization.findUnique({
+        where: {id: minorId},
+        include: {
+            requirements:{
+                include:{
+                    alternatives: true,
+                }
+            },
+        }
+    });
 
     if (!major || !minor) {
         return json({errors: {minor: "Invalid major or minor"}}, {status: 400});
