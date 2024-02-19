@@ -1,7 +1,7 @@
 
-import { Course, CoursePlan, DegreeType, PlannedCourse, Requirement, Specialization } from "@prisma/client";
-import e from "express";
+import { DegreeType, PlannedCourse, Requirement, Specialization } from "@prisma/client";
 import { prisma } from "~/db.server";
+import { extractCourseValues, plannedCoursesFromCodes } from "./course.server";
 
 
 
@@ -73,10 +73,12 @@ export async function createCoursePlan(planName: string, major: Specialization &
 
     for (const requirement of requirements) {
       const credits = requirement.credits;
-      if (requirement.alternatives?.length > 0) {
-        let creditsInAlternatives = requirement.alternatives?.reduce((accumulator, alternative) => accumulator + alternative.credits, 0);
+      const alternatives = (requirement as Requirement & { alternatives: Course[] }).alternatives;
+
+      if (alternatives.length > 0) {
+        let creditsInAlternatives = alternatives.reduce((accumulator, alternative) => accumulator + alternative.credits, 0);
         if (creditsInAlternatives == credits){
-          for (const alternative of requirement.alternatives) {
+          for (const alternative of alternatives) {
             let year = requirement.year;
 
             if(requirement.year < 0){
@@ -127,7 +129,7 @@ export async function createCoursePlan(planName: string, major: Specialization &
 
   for (const plannedCourse of plannedCourses) {
     let thisCourseTerm = plannedCourse.term;
-    let plannedCoursePreReqs = plannedCoursesFromCodes(extractCourseValues(plannedCourse.course.preRequisites), coursePlan);
+    let plannedCoursePreReqs = plannedCoursesFromCodes(extractCourseValues((plannedCourse as any).course.preRequisites), coursePlan);
     let latestPreReqTerm = Math.max(...plannedCoursePreReqs.map(preReq => preReq.term));
     if (latestPreReqTerm >= thisCourseTerm) {
       let newTerm = latestPreReqTerm + 1; 
@@ -140,33 +142,6 @@ export async function createCoursePlan(planName: string, major: Specialization &
     }
   }
   
-}
-
-function extractCourseValues(node: any) {
-  let courseCodes:String[] = [];
-  if (node.type === "LEAF" && node.subtype === "COURSE") {
-      return [node.value];
-  }
-  if (node.childNodes && node.childNodes.length > 0) {
-      node.childNodes.forEach((child: any) => {
-        courseCodes = courseCodes.concat(extractCourseValues(child));
-      });
-  }   
-  return courseCodes;
-}
-
-function plannedCoursesFromCodes(courseCodes: String[], coursePlan: CoursePlan) {
-  let planned: PlannedCourse[] = []
-  courseCodes.map(async (courseCode) => {
-    const course = await prisma.course.findFirst({where: {code: courseCode}});
-    if (course) {
-      const plannedCourse = await prisma.plannedCourse.findFirst({where: {courseId: course.id, coursePlanId: coursePlan.id}});
-      if (plannedCourse) {
-        planned.push(plannedCourse);
-      }
-    }
-  });
-  return planned;
 }
 
 
@@ -192,7 +167,7 @@ export async function setCoursePlan(coursePlanData: any) {
           term: plannedCourse.term,
           course: {
             connect: {
-              id: plannedCourse.course.id,
+              id: plannedCourse.courseId,
             },
           },
           coursePlan: {
@@ -201,6 +176,9 @@ export async function setCoursePlan(coursePlanData: any) {
             },
           },
         },
+        include:{
+          course: true
+        }
       })
     );
 

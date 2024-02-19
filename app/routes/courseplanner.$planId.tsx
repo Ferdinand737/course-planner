@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Course, PlannedCourse } from "@prisma/client";
 import { DragDropContext, Droppable, Draggable} from "react-beautiful-dnd";
 import { ArcherContainer, ArcherElement } from 'react-archer';
 import { useLoaderData } from "@remix-run/react";
@@ -16,9 +15,9 @@ export default function CoursePlan(){
 
     const id = useLoaderData();
    
-    const [coursePlan, setCoursePlan] = useState(null); 
+    const [coursePlan, setCoursePlan] = useState<CoursePlan | null>(null);
     const [loading, setLoading] = useState(true); 
-    const [groupedCourses, setGroupedCourses] = useState([]);
+    const [groupedCourses, setGroupedCourses] = useState<PlannedCourse[][]>([]);
     const [hoveredCourseId, setHoveredCourseId] = useState<string>();
     const [selectedCourse, setSelectedCourse] = useState<Course>();
 
@@ -31,7 +30,6 @@ export default function CoursePlan(){
         }
       
         return courses.reduce((acc: Record<number, PlannedCourse[]>, course: PlannedCourse) => {
-            console.log(course);
           acc[course.term].push(course);
           return acc;
         }, initialAcc);
@@ -48,6 +46,7 @@ export default function CoursePlan(){
         fetchCoursePlan();
     }, []);
     
+ 
     useEffect(() => {
         if (coursePlan && coursePlan.plannedCourses) {
             const numYears = coursePlan.numTerms / 4 ?? 0;
@@ -94,7 +93,8 @@ export default function CoursePlan(){
         
         destClone.splice(droppableDestination.index, 0, removed);
         
-        const result = {};
+        const result: {[key: string]: PlannedCourse[]} = {}; 
+        
         result[droppableSource.droppableId] = sourceClone;
         result[droppableDestination.droppableId] = destClone;
         
@@ -120,7 +120,7 @@ export default function CoursePlan(){
     };
     
 
-    function onDragEnd(result) {
+    function onDragEnd(result: { source: any; destination: any; }) {
         const { source, destination } = result;
     
         if (!destination) {
@@ -147,8 +147,8 @@ export default function CoursePlan(){
 
     function RenderCourse(props:{ plannedCourse: PlannedCourse, idx: number }){
 
-        function extractCourseValues(node) {
-            let courses = [];
+        function extractCourseValues(node: { type: string; subtype: string; value: any; childNodes: any[]; }) {
+            let courses: any[] = [];
             // Check if node itself is a leaf of type COURSE
             if (node.type === "LEAF" && node.subtype === "COURSE") {
                 return [node.value];

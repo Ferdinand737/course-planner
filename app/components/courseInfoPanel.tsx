@@ -1,12 +1,11 @@
-import { Course } from "@prisma/client";
 
-const cardStyle = {
+const cardStyle: React.CSSProperties = {
     padding: '20px',
     margin: '10px 0',
     boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
     borderRadius: '8px',
-    position:'sticky',
-    top:'0',
+    position: 'sticky',
+    top: '0',
 };
 
 export default function CourseInfoPanel(props: { course: Course }) {
@@ -22,6 +21,8 @@ export default function CourseInfoPanel(props: { course: Course }) {
     console.log(course);
 
     return (
+
+
         <div style={cardStyle}>
             <h2>{course.name}</h2>
             <br></br>
