@@ -24,7 +24,7 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
     const planName = formData.get("planName")?.toString();
 
     const majorId = formData.get("major")?.toString();
-    const minorId = formData.get("minor")?.toString();
+    //const minorId = formData.get("minor")?.toString();
 
     if (!planName) {
         return json({errors: {planName: "Plan Name is required"}}, {status: 400});
@@ -37,31 +37,30 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
             requirements:{
                 include:{
                     alternatives: true,
-                }
+                    electiveType: true,  
+                },
             },
         }
     });
 
-    const minor = await prisma.specialization.findUnique({
-        where: {id: minorId},
-        include: {
-            requirements:{
-                include:{
-                    alternatives: true,
-                }
-            },
-        }
-    });
+    // const minor = await prisma.specialization.findUnique({
+    //     where: {id: minorId},
+    //     include: {
+    //         requirements:{
+    //             include:{
+    //                 alternatives: true,
+    //             }
+    //         },
+    //     }
+    // });
 
-    if (!major || !minor) {
-        return json({errors: {minor: "Invalid major or minor"}}, {status: 400});
+    if (!major) {
+        return json({errors: {major: "Invalid major or minor"}}, {status: 400});
     }
 
-    if (major.discipline === minor.discipline) {
-        return json({errors: {minor: "Minor cannot be the same as major"}}, {status: 400});
-    }
 
-    await createCoursePlan(planName, major, minor, userId);
+
+    await createCoursePlan(planName, [major], userId);
 
 
     return json({ errors: null, message: "success" }, { status: 201 });
@@ -74,7 +73,7 @@ export default function NewCoursePlan(){
     const minorRef = useRef<HTMLSelectElement>(null);
 
     useEffect(() => {
-        if (actionData?.errors?.minor) {
+        if (actionData?.errors?.major) {
             minorRef.current?.focus()
         }
     }, [actionData]);
@@ -98,7 +97,7 @@ export default function NewCoursePlan(){
                         ))}
                     </select>
                 </div>
-                <div className="mb-6">
+                {/* <div className="mb-6">
                     <label htmlFor="minor" className="block text-sm font-medium text-gray-700">Minor:</label>
                     <select ref={minorRef} id="minor" name="minor" 
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
@@ -114,7 +113,7 @@ export default function NewCoursePlan(){
                             {actionData.errors.minor}
                         </div>
                     ) : null}
-                </div>
+                </div> */}
                 <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     Submit
                 </button>

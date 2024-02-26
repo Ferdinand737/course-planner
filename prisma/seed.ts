@@ -112,16 +112,41 @@ async function readSpecializationsCSVs() {
           credits: helperRequirement.credits,
           year: helperRequirement.year,
           programSpecific: helperRequirement.programSpecific,
+          electiveTypeId: helperRequirement.electiveType?.id,
+          specializationId:specialization.id ,
           alternatives: {
             connect: helperRequirement.alternatives.map(course => ({ id: course.id })),
-          },
-          specialization: {
-            connect: { id: specialization.id },
           },
         },
       });
     }
   }
+}
+
+async function readElectiveTypesCSV() {
+  const csvPath = path.resolve(__dirname, "../data-aquisition/data/electiveTypes.csv");
+
+  fs.createReadStream(csvPath)
+      .pipe(csv())
+      .on("data", async (row) => {
+        await prisma.course.create({
+          data:{
+            code: row.Code,
+            name: row.Name,
+            description: row.Description,
+            credits: Number(row.Credits),
+            isHonours: false,
+            durationTerms: 1,
+            winterTerm1: true,
+            winterTerm2: true,
+            summerTerm1: true,
+            summerTerm2: true,
+            faculty: "OTHER",
+            preRequisites: "{}",
+            isElectivePlacholder: true,
+          }
+        })
+      })
 }
 
 async function seedCourses() {
@@ -144,6 +169,9 @@ async function seedCourses() {
       }
     });
   })
+
+  await readElectiveTypesCSV();
+  
 }
 
 async function seed() {

@@ -81,6 +81,7 @@ enum DegreeType {
     courseId: string;
     coursePlan: CoursePlan;
     coursePlanId: string;
+    alternativeCourses: Course[];
   }
   
   interface Course {

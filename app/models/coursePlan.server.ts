@@ -1,16 +1,14 @@
 
-import { DegreeType, PlannedCourse, Requirement, Specialization } from "@prisma/client";
+import { DegreeType, ElectiveType, PlannedCourse, Requirement, Specialization } from "@prisma/client";
+import e from "express";
 import { prisma } from "~/db.server";
-import { extractCourseValues, plannedCoursesFromCodes } from "./course.server";
 
-
-
-export function getUserCoursePlans(userId: string) {
-  return prisma.coursePlan.findMany({where: {userId}});
+export async function getUserCoursePlans(userId: string) {
+  return await prisma.coursePlan.findMany({where: {userId}, orderBy: {createdAt: "desc"}});
 }
 
-export function getCoursePlan(planId: string) {
-  return prisma.coursePlan.findUnique({
+export async function getCoursePlan(planId: string) {
+  return await prisma.coursePlan.findUnique({
     where: { id: planId },
     include: {
       degree: {
@@ -32,17 +30,102 @@ export function getCoursePlan(planId: string) {
   });
 }
 
+export async function setCoursePlan(coursePlanData: any) {
+  const { id, title, numTerms, plannedCourses } = coursePlanData.coursePlan;
 
-export async function createCoursePlan(planName: string, major: Specialization & { requirements: Requirement[] }, minor: Specialization & { requirements: Requirement[] }, userId: string) {
+  return await prisma.$transaction(async (prisma) => {
+    const existingPlannedCourses = await prisma.plannedCourse.findMany({ 
+      where: { coursePlanId: id },
+      include: {
+        course: true,
+        alternativeCourses: true,
+      },
+
+    });
+
+    const existingPlannedCoursesMap = new Map(existingPlannedCourses.map(pc => [pc.id, pc]));
+    const incomingPlannedCoursesMap = new Map(plannedCourses.map(pc => [pc.id, pc]));
+
+    const updates = plannedCourses
+      .filter(pc => existingPlannedCoursesMap.has(pc.id)) // Filter for existing plannedCourses
+      .map(pc => prisma.plannedCourse.update({
+        where: { id: pc.id },
+        data: {
+          term: pc.term,
+          course: {
+            connect: { id: pc.course.id}
+          },
+          alternativeCourses:{
+            connect: pc.alternativeCourses?.map((alt: Course) => ({id: alt.id}))
+          }
+        },
+      }));
+    
+    // // Delete plannedCourses that no longer exist in the incoming data
+    // const deletions = existingPlannedCourses
+    //   .filter(pc => !incomingPlannedCoursesMap.has(pc.id)) // Filter for non-existing in incoming data
+    //   .map(pc => prisma.plannedCourse.delete({
+    //     where: { id: pc.id },
+    //   }));
+
+    // // Add new plannedCourses (those in incoming data but not in existing data)
+    // const additions = plannedCourses
+    //   .filter(pc => !existingPlannedCoursesMap.has(pc.id)) // Filter for new plannedCourses
+    //   .map(pc => prisma.plannedCourse.create({
+    //     data: {
+    //       term: pc.term,
+    //       coursePlan: {
+    //         connect: { id },
+    //       },
+    //       course: {
+    //         connect: { id: pc.courseId },
+    //       },
+    //       alternativeCourses:{
+    //         connect: pc.alternativeCourses.map((alt: Course) => ({id: alt.id}))
+    //       }
+    //     },
+    //   }));
+
+    // Execute updates, additions, and deletions
+    await Promise.all([...updates]);
+    
+    // Update CoursePlan metadata like title and numTerms
+    const updatedCoursePlan = await prisma.coursePlan.update({
+      where: { id },
+      data: {
+        title,
+        numTerms,
+      },
+      include: {
+        degree: {
+          include: {
+            specializations: true,
+          },
+        },
+        plannedCourses: {
+          include: {
+            course: {
+              include: {
+                equivalentCourses: true,
+                excludedCourses: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return updatedCoursePlan;
+  });
+}
+
+export async function createCoursePlan(planName: string, specializations: Specialization[], userId: string) {
   
   const degree = await prisma.degree.create({
     data: {
       degreeType: DegreeType.BSc,
       specializations: {
-        connect: [
-          { id: major.id },
-          { id: minor.id },
-        ],
+        connect: specializations.map(specialization => ({ id: specialization.id }))
       },
     },
   });
@@ -64,20 +147,20 @@ export async function createCoursePlan(planName: string, major: Specialization &
     },
   });
   
-  let plannedCourses: PlannedCourse[] = [];
+  for (const specialization of specializations){
 
-  for (const specialization of [major, minor]){
-
-    const requirements = specialization?.requirements;
-
+    const requirements = (specialization as Specialization & { requirements: Requirement[] })?.requirements;
 
     for (const requirement of requirements) {
       const credits = requirement.credits;
       const alternatives = (requirement as Requirement & { alternatives: Course[] }).alternatives;
+      const electiveType = (requirement as Requirement & { electiveType: Course }).electiveType;
 
       if (alternatives.length > 0) {
         let creditsInAlternatives = alternatives.reduce((accumulator, alternative) => accumulator + alternative.credits, 0);
+
         if (creditsInAlternatives == credits){
+
           for (const alternative of alternatives) {
             let year = requirement.year;
 
@@ -100,8 +183,7 @@ export async function createCoursePlan(planName: string, major: Specialization &
               term = baseTermNumber + 1;
             }
 
-
-            const plannedCourse = await prisma.plannedCourse.create({
+            await prisma.plannedCourse.create({
               data: {
                 term,
                 course: {
@@ -114,77 +196,86 @@ export async function createCoursePlan(planName: string, major: Specialization &
                     id: coursePlan.id,
                   },
                 },
+                alternativeCourses: {
+                  connect: alternatives.map(alt => ({ id: alt.id }))
+                }
               },
-              include:{
-                course: true
-              }
             });
-            plannedCourses.push(plannedCourse);
+          }
+        }else if(electiveType){
+
+          let electiveTypeStr = electiveType.code
+          if(electiveTypeStr.includes("CHOICE")){
+            electiveTypeStr = "CHOICE"
+          }else{
+            electiveTypeStr = "ELEC"
+          }
+          
+          let elecCredits = 0;
+
+          while(elecCredits < credits){
+            let year = requirement.year < 0 ? Math.floor(Math.random() * (3)) + 2 : requirement.year;
+            const baseTermNumber = (year - 1) * 4;
+            let term = baseTermNumber + 1; 
+            
+  
+            await prisma.plannedCourse.create({
+              data: {
+                term,
+                electiveType: electiveTypeStr,
+                isElective: true,
+                course: {
+                  connect: {
+                    id: electiveType.id,
+                  },
+                },
+                coursePlan: {
+                  connect: {
+                    id: coursePlan.id,
+                  },
+                },
+                alternativeCourses: {
+                  connect: alternatives.map(alt => ({ id: alt.id }))
+                }
+              },
+            });
+            elecCredits += electiveType.credits || 0;
           }
         }
       }
     }
   }
-
-
-  for (const plannedCourse of plannedCourses) {
-    let thisCourseTerm = plannedCourse.term;
-    let plannedCoursePreReqs = plannedCoursesFromCodes(extractCourseValues((plannedCourse as any).course.preRequisites), coursePlan);
-    let latestPreReqTerm = Math.max(...plannedCoursePreReqs.map(preReq => preReq.term));
-    if (latestPreReqTerm >= thisCourseTerm) {
-      let newTerm = latestPreReqTerm + 1; 
-      await prisma.plannedCourse.update({
-        where: { id: plannedCourse.id },
-        data: {
-          term: newTerm,
-        },
-      });
-    }
-  }
   
 }
 
-
-export async function setCoursePlan(coursePlanData: any) {
-  const { id, title, numTerms, plannedCourses } = coursePlanData.coursePlan;
-
-  return await prisma.$transaction(async (prisma) => {
-    const updatedCoursePlan = await prisma.coursePlan.update({
-      where: { id },
-      data: {
-        title,
-        numTerms,
-      },
-    });
-
-    // Delete existing plannedCourses for the coursePlan
-    await prisma.plannedCourse.deleteMany({ where: { coursePlanId: id } });
-
-    // Use Promise.all to wait for all plannedCourse creations
-    const plannedCourseCreations = plannedCourses.map((plannedCourse: PlannedCourse) =>
-      prisma.plannedCourse.create({
-        data: {
-          term: plannedCourse.term,
-          course: {
-            connect: {
-              id: plannedCourse.courseId,
-            },
-          },
-          coursePlan: {
-            connect: {
-              id,
-            },
-          },
-        },
-        include:{
-          course: true
-        }
-      })
-    );
-
-    // Await all plannedCourse creations
-    await Promise.all(plannedCourseCreations);
-
-    return updatedCoursePlan;
+export async function getAlternatives(plannedCourseId: string, searchTerm: string) {
+  const plannedCourse = await prisma.plannedCourse.findUnique({
+    where: { id: plannedCourseId },
+    include: {
+      alternativeCourses: true,
+    },
   });
+  const alternatives = await prisma.course.findMany({
+    where: {
+      OR: [
+        { code: { contains: searchTerm, mode: "insensitive" } },
+        { name: { contains: searchTerm, mode: "insensitive" } },
+      ],
+      AND: {isElectivePlacholder: false},
+      id: {
+        in: plannedCourse?.alternativeCourses.map((course) => course.id),
+      },
+    },
+  });
+
+  const sortedAlternatives = alternatives.sort((a, b) => {
+    const aCodeMatch = a.code.toLowerCase().includes(searchTerm.toLowerCase());
+    const bCodeMatch = b.code.toLowerCase().includes(searchTerm.toLowerCase());
+    if (aCodeMatch === bCodeMatch) return 0;
+    if (aCodeMatch && !bCodeMatch) return -1;
+    return 1;
+  });
+
+  return sortedAlternatives;
 }
+

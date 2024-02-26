@@ -19,9 +19,7 @@ export default function CoursePlan(){
     const [loading, setLoading] = useState(true); 
     const [groupedCourses, setGroupedCourses] = useState<PlannedCourse[][]>([]);
     const [hoveredCourseId, setHoveredCourseId] = useState<string>();
-    const [selectedCourse, setSelectedCourse] = useState<Course>();
-
-
+    const [selectedCourse, setSelectedCourse] = useState<PlannedCourse>();
 
     const groupByTerm = (courses: PlannedCourse[], totalTerms: number): Record<number, PlannedCourse[]> => {
         const initialAcc: Record<number, PlannedCourse[]> = {};
@@ -34,7 +32,6 @@ export default function CoursePlan(){
           return acc;
         }, initialAcc);
     };
-
 
     useEffect(() => {
         async function fetchCoursePlan() {
@@ -75,8 +72,7 @@ export default function CoursePlan(){
         if(groupedCourses && coursePlan){
             postCoursePlan();
         }
-    },[groupedCourses, coursePlan]); 
-
+    },[groupedCourses]); 
 
 
 
@@ -129,19 +125,21 @@ export default function CoursePlan(){
         const sInd = +source.droppableId;
         const dInd = +destination.droppableId;
     
-        if (sInd === dInd) {
-            const items = reorder(groupedCourses[sInd], source.index, destination.index);
-            const newState = [...groupedCourses];
-            newState[sInd] = items;
-            setGroupedCourses(updateTermNumbers(newState));
-        } else {
-            const result = move(groupedCourses[sInd], groupedCourses[dInd], source, destination);
-            const newState =[...groupedCourses];
-            newState[sInd] = result[sInd];
-            newState[dInd] = result[dInd];
+        let newState = [...groupedCourses]; // Ensure newState is a new array
     
-            setGroupedCourses(updateTermNumbers(newState));
+        if (sInd === dInd) {
+            const items = reorder(newState[sInd], source.index, destination.index);
+            newState[sInd] = items;
+        } else {
+            const result = move(newState[sInd], newState[dInd], source, destination);
+            newState = newState.map((group, index) => { // Create a new array for newState
+                if (index === sInd) return result[sInd];
+                if (index === dInd) return result[dInd];
+                return group;
+            });
         }
+    
+        setGroupedCourses(updateTermNumbers(newState));
     }
    
 
@@ -210,7 +208,7 @@ export default function CoursePlan(){
                         >
                             <div className="p-2 m-2 rounded-full w-18 h-18 flex items-center justify-center bg-blue-200" style={{ position: 'relative', zIndex: 1, backgroundColor: '#7ddcff' }}
                                 onMouseEnter={() => setHoveredCourseId(thisPlannedCourse.id)}
-                                onClick={() => setSelectedCourse(thisCourse)}
+                                onClick={() => setSelectedCourse(thisPlannedCourse)}
                                 // onMouseLeave={() => setHoveredCourseId(null)}  // this line breaks dragging             
                             >
                                 <p style={{ fontSize: '0.8rem' }}>{thisCourse.code}</p> 
@@ -272,10 +270,22 @@ export default function CoursePlan(){
         )
     }
 
+    const updateElectiveCourse = (course: PlannedCourse, alternative: Course) => {
+        const newGroupedCourses = [...groupedCourses];
+        const term = newGroupedCourses[course.term - 1];
+        const index = term.findIndex((plannedCourse) => plannedCourse.id === course.id);
+        term[index] = {
+            ...course,
+            course: alternative,
+        };
+        setGroupedCourses(newGroupedCourses);
+    }
+
 
     return (
         <div className="flex h-full min-h-screen"> 
             <div className="flex-1"> 
+            <h1>{coursePlan?.title}</h1>
                 <ArcherContainer>
                     <DragDropContext onDragEnd={onDragEnd}>
                         <div>
@@ -286,11 +296,11 @@ export default function CoursePlan(){
                     </DragDropContext>
                 </ArcherContainer>
             </div>
-            {selectedCourse && (
+            {selectedCourse && coursePlan ? (
                 <div className="w-80">
-                    <CourseInfoPanel course={selectedCourse}/>
+                    <CourseInfoPanel plannedCourse={selectedCourse} updateElectiveCourse={updateElectiveCourse} planId={coursePlan.id}/>
                 </div>
-            )}
+            ):(null)}
         </div>
     );
     

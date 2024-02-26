@@ -1,0 +1,38 @@
+Code,Name,Description,Credits,Specificity,YearCriteria,DisciplineCriteria,CourseCriteria,isLeaf,Comments
+ELEC,Elective,Elective Course placeholder. Choose an elective from the options.,3,,1;2;3;4;5,ANY,NA,0,Specificity: whether this is a faculty or discipline specific elective
+ELEC_UL,Upper Level Elective,Elective Course placeholder. Choose an elective from the options.,3,,3;4;5,ANY,NA,0,YearCriteria: which cousre level is accepted for this group
+ELEC_SCI,Science Electives,Elective Course placeholder. Choose an elective from the options.,3,FACULTY,1;2;3;4;5,ASTR;BIOC;BIOL;CHEM;COSC;DATA;EESC;GISC;MATH;PHYS;STAT,GEOG108;GEOG109;GEOG200;GEOG205;GEOG207;GEOG213;GEOG222;GEOG271;GEOG272;GEOG301;GEOG304;GEOG307;GEOG310;GEOG314;GEOG317;GEOG341;GEOG356;GEOG367;GEOG377;GEOG380;GEOG381;GEOG413;GEOG414;GEOG416;GEOG422;GEOG436;GEOG437;GEOG466,0,DiscplineCriteria: which disciplines below to this group
+ELEC_ART,Arts Electives,Elective Course placeholder. Choose an elective from the options.,3,FACULTY,1;2;3;4;5,AFST;INDO;ASL;INFO;ARCL;IAR;ANTH;ITAL;ARST;ITST;ARTH;JAPN;ARTC;JRNL;ARTS;KORN;ASTU;LATN;WRDS;LAST;ACAM;LASO;ASLA;LIBR;ASIA;LAIS;CDST;LING;CNTO;MDVL;CTLN;MES;CENS;ARBM;CHIL;MUSC;CHIN;NEST;ARBC;NEPL;CLST;PERS;CNRS;PHIL;COLX;POLS;CRWR;POLI;CSIS;PORT;CCST;PSYC;DANI;PPGA;DMED;PUNJ;ECON;RGLA;ENGL;RELG;IEST;RMST;FMST;RUSS;FIPR;SANS;FIST;SCAN;FNEL;SLAV;FNIS;SOWK;FREN;SOCI;FHIS;SOAL;GRSJ;SEAL;GEOB;SPAN;GEOG;RGST;GERM;SWED;GREK;THTR;HESO;THFL;HEBR;TIBT;HINU;UKRN;HIST;URST;INLB;VISA,,0,"CourseCriteria: in addition to disciplines, which additional courses can be counted towards this group"
+ELEC_NONSCI,Non Science Electives,Elective Course placeholder. Choose an elective from the options.,3,FACULTY,1;2;3;4;5,AFST;INDO;ASL;INFO;ARCL;IAR;ANTH;ITAL;ARST;ITST;ARTH;JAPN;ARTC;JRNL;ARTS;KORN;ASTU;LATN;WRDS;LAST;ACAM;LASO;ASLA;LIBR;ASIA;LAIS;CDST;LING;CNTO;MDVL;CTLN;MES;CENS;ARBM;CHIL;MUSC;CHIN;NEST;ARBC;NEPL;CLST;PERS;CNRS;PHIL;COLX;POLS;CRWR;POLI;CSIS;PORT;CCST;PSYC;DANI;PPGA;DMED;PUNJ;ECON;RGLA;ENGL;RELG;IEST;RMST;FMST;RUSS;FIPR;SANS;FIST;SCAN;FNEL;SLAV;FNIS;SOWK;FREN;SOCI;FHIS;SOAL;GRSJ;SEAL;GEOB;SPAN;GEOG;RGST;GERM;SWED;GREK;THTR;HESO;THFL;HEBR;TIBT;HINU;UKRN;HIST;URST;INLB;VISA,NA,0,isLeaf: does it have subgroups?
+ELEC_2_SCI,Second Year Science Electives,Elective Course placeholder. Choose an elective from the options.,3,FACULTY,2,ASTR;BIOC;BIOL;CHEM;COSC;DATA;EESC;GISC;MATH;PHYS;STAT,GEOG200;GEOG205;GEOG207;GEOG213;GEOG222;GEOG271;GEOG272,0,Equal to ART right now because only two faculties are supported
+ELEC_COSC,Computer Science Elective,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,COSC,NA,0,
+ELEC_UL_COSC,Upper Level Computer Science Elective,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,COSC,NA,1,
+ELEC_UL_GEOG,Upper Level Geology Elective,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,GEOG,NA,1,
+ELEC_ECON,Economics Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,ECON,NA,0,Rules for Code naming:
+ELEC_UL_ECON,Upper Level Economics Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,ECON,NA,1,* must start with ELEC_
+ELEC_BIOL,Biology Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,BIOL,NA,0,* must use underscore to separate parts
+ELEC_UL_BIOL,Upper Level Biology Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,BIOL,NA,1,* Faculty or Discipline are optional and must be at end
+ELEC_CHEM,Chemistry Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,CHEM,NA,0,* UL (optional) can be in middle or end.
+ELEC_UL_CHEM,Upper Level Chemistry Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,CHEM,NA,1,* Year restriction (optional) is single digit
+ELEC_ANTH,Anthropology Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,ANTH,NA,0,
+ELEC_UL_ANTH,Upper Level Anthropology Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,ANTH,NA,1,
+ELEC_GISC,Geospatial Information Science Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,GISC,NA,0,
+ELEC_UL_GISC,Upper Level Geospatial Information Science Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,GISC,NA,1,
+ELEC_MATH,Mathematics Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,MATH,NA,0,
+ELEC_UL_MATH,Upper Level Mathematics Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,MATH,NA,1,
+ELEC_PHYS,Statistics Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,PHYS,ASTR210;ASTR321,0,
+ELEC_UL_PHYS,Upper Level Physics Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,PHYS,ASTR321,1,
+ELEC_STAT,Statistics Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,STAT,NA,0,
+ELEC_UL_STAT,Upper Level Statistics Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,STAT,NA,1,
+ELEC_DATA,Data Science Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,DATA,NA,0,
+ELEC_UL_DATA,Upper Level Data Science Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,DATA,NA,1,
+ELEC_EESC,Earth and Environmental Science Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,EESC,NA,0,
+ELEC_UL_EESC,Upper Level Earth and Environmental Science Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,EESC,NA,1,
+ELEC_4_PHYS,Fourth Year Physics and Astronomy Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,4,PHYS,NA,0,
+ELEC_UL_SCI,Upper Level Science Electives,Elective Course placeholder. Choose an elective from the options.,3,FACULTY,3;4;5,ASTR;BIOC;BIOL;CHEM;COSC;DATA;EESC;GISC;MATH;PHYS;STAT,GEOG301;GEOG304;GEOG307;GEOG310;GEOG314;GEOG317;GEOG341;GEOG356;GEOG367;GEOG377;GEOG380;GEOG381;GEOG413;GEOG414;GEOG416;GEOG422;GEOG436;GEOG437;GEOG466,1,
+ELEC_UL_STAT_DATA,Upper Level Statistics and Data Science Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,STAT;DATA,NA,1,
+ELEC_GEOG,Geography Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,GEOG,NA,0,
+ELEC_UL_MATH_STAT,Upper Level Mathematics and Statistics Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,MATH;STAT,NA,1,
+ELEC_PSYO,Psychology Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,1;2;3;4;5,PSYO,NA,0,
+ELEC_UL_PSYO,Upper Level Psychology Electives,Elective Course placeholder. Choose an elective from the options.,3,DISCIPLINE,3;4;5,PSYO,NA,1,
+CHOICE,Multiple Course Options for Requirement,Elective Course placeholder. Choose an elective from the options.,3,,,,,,

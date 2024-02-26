@@ -70,7 +70,11 @@ model Requirement {
   credits         Int
   year            Int
   programSpecific Boolean         @default(false)
-  alternatives    Course[]        @relation("CourseRequirements")
+
+  electiveType   Course? @relation(fields: [electiveTypeId], references: [id])
+  electiveTypeId String?
+
+  alternatives Course[] @relation("CourseRequirements")
 
   specialization   Specialization? @relation(fields: [specializationId], references: [id])
   specializationId String?
@@ -82,21 +86,31 @@ model CoursePlan {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   numTerms  Int      @default(16)
-  degree    Degree   @relation(fields: [degreeId], references: [id])
-  degreeId  String
+
+  degree   Degree @relation(fields: [degreeId], references: [id])
+  degreeId String
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId String 
+  userId String
 
   plannedCourses PlannedCourse[]
 }
 
+enum ElectiveType {
+  ELEC
+  CHOICE
+}
 model PlannedCourse {
   id   String @id @default(cuid())
   term Int
 
+  isElective Boolean @default(false)
+  electiveType ElectiveType?
+
   course   Course @relation(fields: [courseId], references: [id])
   courseId String
+
+  alternativeCourses Course[] @relation("PlannedCourseAlternatives")
 
   coursePlan   CoursePlan @relation(fields: [coursePlanId], references: [id])
   coursePlanId String
@@ -113,6 +127,7 @@ model Course {
   code        String  @unique
   name        String
   description String?
+  isElectivePlacholder  Boolean @default(false)// Special type of placeholder course
 
   winterTerm1 Boolean @default(false)
   winterTerm2 Boolean @default(false)
@@ -129,6 +144,8 @@ model Course {
 
   plannedCourses PlannedCourse[]
 
+  alternativeCourses PlannedCourse[] @relation("PlannedCourseAlternatives")
+
   equivalentCourses Course[] @relation("EquivalentCourses")
   equivalentTo      Course[] @relation("EquivalentCourses")
 
@@ -138,5 +155,6 @@ model Course {
   excludedCourses Course[] @relation("ExcludedCourses")
   excludedBy      Course[] @relation("ExcludedCourses")
 
-  preRequisites Json @default("{}")
+  preRequisites Json          @default("{}")
+  requirement   Requirement[]
 }

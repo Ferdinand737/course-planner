@@ -1,10 +1,19 @@
 import { LoaderFunctionArgs, json } from "@remix-run/node";
-import { getCoursePlan, setCoursePlan } from "~/models/coursePlan.server";
+import { getAlternatives, getCoursePlan, setCoursePlan } from "~/models/coursePlan.server";
 import { requireUserId } from "~/session.server";
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
     const userId = await requireUserId(request);
-    const coursePlan = await getCoursePlan(params.planId || '');
+
+    const url = new URL(request.url);
+    const plannedCourseId = url.searchParams.get("plannedCourseId") || '';
+    const alternativeSearch = url.searchParams.get("alternativeSearch") || '';
+    if (plannedCourseId) {
+        const alternativeData = await getAlternatives(plannedCourseId, alternativeSearch);
+        return json({ alternativeData });
+    }
+
+    const coursePlan = await getCoursePlan(params.planId ?? '');
     return json({ coursePlan });
 };
 
