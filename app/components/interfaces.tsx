@@ -1,32 +1,37 @@
-enum DegreeType {
+export enum DegreeType {
     BSc,
     BA,
   }
   
-  enum SpecializationType {
+export  enum SpecializationType {
     MAJOR,
     MINOR,
     HONOURS,
   }
   
-  enum RequirementType {
+export  enum RequirementType {
     AT_LEAST,
   }
   
-  enum Faculty {
+export  enum Faculty {
     SCI,
     ART,
     OTHER,
   }
+
+export  enum ElectiveType {
+    ELEC,
+    CHOICE
+  }
   
-  interface Degree {
+export  interface Degree {
     id: string;
     degreeType: DegreeType;
     specializations: Specialization[];
     coursePlan: CoursePlan[];
   }
   
-  interface Specialization {
+export  interface Specialization {
     id: string;
     name: string;
     specializationType: SpecializationType;
@@ -35,17 +40,18 @@ enum DegreeType {
     degree: Degree[];
   }
   
-  interface Requirement {
+export  interface Requirement {
     id: string;
     constraintType: RequirementType;
     credits: number;
     year: number;
     programSpecific: boolean;
+    electiveCourse?: Course;
     alternatives: Course[];
     specialization?: Specialization;
     specializationId?: string;
   }
-  interface User {
+export  interface User {
     id: string;
     email: string;
     isAdmin: boolean;
@@ -55,13 +61,13 @@ enum DegreeType {
     coursePlans: CoursePlan[];
   }
   
-  interface Password {
+export  interface Password {
     hash: string;
     user: User;
     userId: string;
   }
   
-  interface CoursePlan {
+export  interface CoursePlan {
     id: string;
     title: string;
     createdAt: Date;
@@ -74,7 +80,9 @@ enum DegreeType {
     plannedCourses: PlannedCourse[];
   }
   
-  interface PlannedCourse {
+export  interface PlannedCourse {
+    electiveType: ElectiveType;
+    isElective: any;
     id: string;
     term: number;
     course: Course;
@@ -84,7 +92,8 @@ enum DegreeType {
     alternativeCourses: Course[];
   }
   
-  interface Course {
+export  interface Course {
+    preRequisiteString: String;
     id: string;
     code: string;
     name: string;

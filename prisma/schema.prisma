@@ -71,8 +71,8 @@ model Requirement {
   year            Int
   programSpecific Boolean         @default(false)
 
-  electiveType   Course? @relation(fields: [electiveTypeId], references: [id])
-  electiveTypeId String?
+  electiveCourse   Course? @relation(fields: [electiveCourseId], references: [id])
+  electiveCourseId String?
 
   alternatives Course[] @relation("CourseRequirements")
 
@@ -128,17 +128,15 @@ model Course {
   name        String
   description String?
   isElectivePlacholder  Boolean @default(false)// Special type of placeholder course
-
   winterTerm1 Boolean @default(false)
   winterTerm2 Boolean @default(false)
   summerTerm1 Boolean @default(false)
   summerTerm2 Boolean @default(false)
-
   durationTerms Int     @default(1)
   credits       Float   @default(3)
   isHonours     Boolean @default(false)
-
   faculty Faculty
+  preRequisiteString String?
 
   requirements Requirement[] @relation("CourseRequirements")
 

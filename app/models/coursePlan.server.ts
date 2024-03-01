@@ -1,6 +1,5 @@
 
-import { DegreeType, ElectiveType, PlannedCourse, Requirement, Specialization } from "@prisma/client";
-import e from "express";
+import { DegreeType, ElectiveType, Requirement, Specialization } from "@prisma/client";
 import { prisma } from "~/db.server";
 
 export async function getUserCoursePlans(userId: string) {
@@ -154,7 +153,7 @@ export async function createCoursePlan(planName: string, specializations: Specia
     for (const requirement of requirements) {
       const credits = requirement.credits;
       const alternatives = (requirement as Requirement & { alternatives: Course[] }).alternatives;
-      const electiveType = (requirement as Requirement & { electiveType: Course }).electiveType;
+      const electiveCourse = (requirement as Requirement & { electiveCourse: Course }).electiveCourse;
 
       if (alternatives.length > 0) {
         let creditsInAlternatives = alternatives.reduce((accumulator, alternative) => accumulator + alternative.credits, 0);
@@ -202,13 +201,13 @@ export async function createCoursePlan(planName: string, specializations: Specia
               },
             });
           }
-        }else if(electiveType){
+        }else if(electiveCourse){
 
-          let electiveTypeStr = electiveType.code
+          let electiveTypeStr = electiveCourse.code
           if(electiveTypeStr.includes("CHOICE")){
-            electiveTypeStr = "CHOICE"
+            electiveTypeStr = ElectiveType.CHOICE
           }else{
-            electiveTypeStr = "ELEC"
+            electiveTypeStr = ElectiveType.ELEC
           }
           
           let elecCredits = 0;
@@ -222,11 +221,11 @@ export async function createCoursePlan(planName: string, specializations: Specia
             await prisma.plannedCourse.create({
               data: {
                 term,
-                electiveType: electiveTypeStr,
+                electiveType: electiveTypeStr as ElectiveType,
                 isElective: true,
                 course: {
                   connect: {
-                    id: electiveType.id,
+                    id: electiveCourse.id,
                   },
                 },
                 coursePlan: {
@@ -239,7 +238,7 @@ export async function createCoursePlan(planName: string, specializations: Specia
                 }
               },
             });
-            elecCredits += electiveType.credits || 0;
+            elecCredits += electiveCourse.credits || 0;
           }
         }
       }

@@ -133,7 +133,7 @@ export class HelperRequirement{
     programSpecific: boolean
     alternativeString: string
     alternatives: Course[]
-    electiveType: Course | null
+    electiveCourse: Course | null
 
 
     constructor(row:any){
@@ -145,7 +145,7 @@ export class HelperRequirement{
         this.alternativeString = row["Alternatives"]
 
         this.alternatives = []
-        this.electiveType = null
+        this.electiveCourse = null
     }
 
     async populateAlternatives() {
@@ -163,11 +163,11 @@ export class HelperRequirement{
                 }
             }
             this.alternatives = alternativeCourses;
-            this.electiveType = await prisma.course.findUnique({
+            this.electiveCourse = await prisma.course.findUnique({
                 where: { code: "CHOICE" }
             })
         } else {
-            this.electiveType = await prisma.course.findUnique({
+            this.electiveCourse = await prisma.course.findUnique({
                 where: { code: this.alternativeString.trim() }
             })
             const queries = this.alternativeString.split("_").filter(q => q !== "" && q !== "ELEC").map(q => q.trim());

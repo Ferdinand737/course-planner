@@ -34,6 +34,7 @@ async function readCoursesCSV(): Promise<HelperCourse[]> {
               summerTerm2: helperCourse.summerTerm2,
               faculty: helperCourse.faculty,
               preRequisites: helperCourse.pre_req_json as any,
+              preRequisiteString: helperCourse.pre_req_str,
             },
           });
         }
@@ -112,7 +113,7 @@ async function readSpecializationsCSVs() {
           credits: helperRequirement.credits,
           year: helperRequirement.year,
           programSpecific: helperRequirement.programSpecific,
-          electiveTypeId: helperRequirement.electiveType?.id,
+          electiveCourseId: helperRequirement.electiveCourse?.id,
           specializationId:specialization.id ,
           alternatives: {
             connect: helperRequirement.alternatives.map(course => ({ id: course.id })),

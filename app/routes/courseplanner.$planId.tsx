@@ -3,6 +3,7 @@ import { DragDropContext, Droppable, Draggable} from "react-beautiful-dnd";
 import { ArcherContainer, ArcherElement } from 'react-archer';
 import { useLoaderData } from "@remix-run/react";
 import CourseInfoPanel from "~/components/courseInfoPanel";
+import { CoursePlan, PlannedCourse, Course } from "../components/interfaces";
 
 
 export async function clientLoader({params}: {params: any}) {
@@ -11,7 +12,7 @@ export async function clientLoader({params}: {params: any}) {
 };
 
 
-export default function CoursePlan(){
+export default function CoursePlanPage(){
 
     const id = useLoaderData();
    
@@ -178,6 +179,8 @@ export default function CoursePlan(){
             }
         });
 
+        const courseColor = thisPlannedCourse.isElective ? '#f7c3b1' : '#7ddcff';
+
 
         return(
             <>
@@ -206,7 +209,8 @@ export default function CoursePlan(){
                                 }))
                             }
                         >
-                            <div className="p-2 m-2 rounded-full w-18 h-18 flex items-center justify-center bg-blue-200" style={{ position: 'relative', zIndex: 1, backgroundColor: '#7ddcff' }}
+                            <div className="p-2 m-2 rounded-full w-18 h-18 flex items-center justify-center" 
+                                style={{ position: 'relative', zIndex: 1, backgroundColor: courseColor}}
                                 onMouseEnter={() => setHoveredCourseId(thisPlannedCourse.id)}
                                 onClick={() => setSelectedCourse(thisPlannedCourse)}
                                 // onMouseLeave={() => setHoveredCourseId(null)}  // this line breaks dragging             
@@ -285,7 +289,6 @@ export default function CoursePlan(){
     return (
         <div className="flex h-full min-h-screen"> 
             <div className="flex-1"> 
-            <h1>{coursePlan?.title}</h1>
                 <ArcherContainer>
                     <DragDropContext onDragEnd={onDragEnd}>
                         <div>

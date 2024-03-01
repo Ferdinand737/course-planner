@@ -37,7 +37,7 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
             requirements:{
                 include:{
                     alternatives: true,
-                    electiveType: true,  
+                    electiveCourse: true,  
                 },
             },
         }
