@@ -3,7 +3,7 @@ import { DragDropContext, Droppable, Draggable} from "react-beautiful-dnd";
 import { ArcherContainer, ArcherElement } from 'react-archer';
 import { useLoaderData } from "@remix-run/react";
 import CourseInfoPanel from "~/components/courseInfoPanel";
-import { CoursePlan, PlannedCourse, Course } from "../components/interfaces";
+import { CoursePlan, PlannedCourse, Course, ElectiveType } from "../components/interfaces";
 
 
 export async function clientLoader({params}: {params: any}) {
@@ -179,7 +179,7 @@ export default function CoursePlanPage(){
             }
         });
 
-        const courseColor = thisPlannedCourse.isElective ? '#f7c3b1' : '#7ddcff';
+        const courseColor = !thisPlannedCourse.isElective ? '#7ddcff':thisPlannedCourse.electiveType == "CHOICE" ? '#aaffaa' : '#f7c3b1';
 
 
         return(
