@@ -1,4 +1,4 @@
-import { Course, Faculty, Prisma, RequirementType } from "@prisma/client";
+import { Course, Faculty, RequirementType } from "~/interfaces";
 import { prisma } from "~/db.server";
 
 export class HelperCourse{

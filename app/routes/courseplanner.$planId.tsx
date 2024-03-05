@@ -5,6 +5,7 @@ import { useLoaderData } from "@remix-run/react";
 import CourseInfoPanel from "~/components/courseInfoPanel";
 import { Course, CoursePlan, PlannedCourse } from "~/interfaces";
 import { message } from "antd";
+import { Prisma } from "@prisma/client";
 
 
 export async function clientLoader({params}: {params: any}) {
@@ -148,7 +149,8 @@ export default function CoursePlanPage(){
 
     function RenderCourse(props:{ plannedCourse: PlannedCourse, idx: number }){
 
-        function extractCourseValues(node: { type: string; subtype: string; value: any; childNodes: any[]; }) {
+        function extractCourseValues(node: { type: string; subtype: string; value: any; childNodes: any[]; } | any) {
+     
             let courses: any[] = [];
             // Check if node itself is a leaf of type COURSE
             if (node.type === "LEAF" && node.subtype === "COURSE") {
@@ -156,7 +158,7 @@ export default function CoursePlanPage(){
             }
             // Recursively search through child nodes if they exist
             if (node.childNodes && node.childNodes.length > 0) {
-                node.childNodes.forEach(child => {
+                node.childNodes.forEach((child: { type: string; subtype: string; value: any; childNodes: any[]; }) => {
                     courses = courses.concat(extractCourseValues(child));
                 });
             }   
@@ -171,12 +173,12 @@ export default function CoursePlanPage(){
 
         const thisCourseAPreRequisite: PlannedCourse[] = []
         
-        coursePlan?.plannedCourses.forEach((plannedCourse: PlannedCourse) => {
+        coursePlan?.plannedCourses?.forEach((plannedCourse: PlannedCourse) => {
             
-            const preRequisites =  extractCourseValues(plannedCourse.course.preRequisites);
+            const preRequisites =  extractCourseValues(plannedCourse?.course?.preRequisites);
 
             for(const preRequisite of preRequisites){
-                if (preRequisite.includes(thisCourse.code)) {
+                if (preRequisite.includes(thisCourse?.code)) {
                     thisCourseAPreRequisite.push(plannedCourse);
                 }
             }
@@ -218,7 +220,7 @@ export default function CoursePlanPage(){
                                 onClick={() => setSelectedCourse(thisPlannedCourse)}
                                 // onMouseLeave={() => setHoveredCourseId(null)}  // this line breaks dragging             
                             >
-                                <p style={{ fontSize: '0.8rem' }}>{thisCourse.code}</p> 
+                                <p style={{ fontSize: '0.8rem' }}>{thisCourse?.code}</p> 
                             </div>
                         </ArcherElement>
 
@@ -282,7 +284,7 @@ export default function CoursePlanPage(){
         for (const existingPlanned of newGroupedCourses.flat()) {
 
 
-            if(existingPlanned.course.id === alternative.id){     
+            if(existingPlanned?.course?.id === alternative.id){     
                 message.error('This course is already planned');
                 return;
             }

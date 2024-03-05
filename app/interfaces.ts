@@ -12,6 +12,7 @@ import {
     Requirement as PrismaRequirement,
     User as PrismaUser,
     Password as PrismaPassword,
+    Prisma,
   } from '@prisma/client';
 
 export { PrismaElectiveType as ElectiveType };
@@ -21,51 +22,51 @@ export { PrismaRequirementType as RequirementType };
 export { PrismaFaculty as Faculty };
   
 export interface Course extends PrismaCourse {
-    plannedCourses: PlannedCourse[];
-    alternativeCourses: PlannedCourse[];
-    equivalentCourses: Course[];
-    equivalentTo: Course[];
-    coRequisiteCourses: Course[];
-    coRequisiteOf: Course[];
-    excludedCourses: Course[];
-    excludedBy: Course[];
-    requirements: Requirement[];
-    preRequisites:{ type: string; subtype: string; value: any; childNodes: any[]; }
+    plannedCourses?: PlannedCourse[];
+    alternativeCourses?: PlannedCourse[];
+    equivalentCourses?: Course[];
+    equivalentTo?: Course[];
+    coRequisiteCourses?: Course[];
+    coRequisiteOf?: Course[];
+    excludedCourses?: Course[];
+    excludedBy?: Course[];
+    requirements?: Requirement[];
+    preRequisites:{ type: string; subtype: string; value: any; childNodes: any[]; } | null | Prisma.JsonValue;
 }
   
 export interface CoursePlan extends PrismaCoursePlan {
-    degree: Degree;
-    user: User;
-    plannedCourses: PlannedCourse[];
+    degree?: Degree | null;
+    user?: User | null;
+    plannedCourses?: PlannedCourse[] | null;
 }
 
 export interface PlannedCourse extends PrismaPlannedCourse {
-    course: Course;
-    alternativeCourses: Course[];
-    coursePlan: CoursePlan;
+    course?: Course | null;
+    alternativeCourses?: Course[] | null;
+    coursePlan?: CoursePlan | null;
 }
 
 export interface Degree extends PrismaDegree {
-    specializations: Specialization[];
-    CoursePlan: CoursePlan[];
+    specializations?: Specialization[] | null;
+    CoursePlan?: CoursePlan[] | null;
 }
 
 export interface Specialization extends PrismaSpecialization {
-    requirements: Requirement[];
-    degree: Degree[];
+    requirements?: Requirement[] | null;
+    degree?: Degree[] | null;
 }
 
 export interface Requirement extends PrismaRequirement {
-    electiveCourse?: Course;
-    alternatives: Course[];
-    specialization?: Specialization;
+    electiveCourse?: Course | null;
+    alternatives?: Course[] | null;
+    specialization?: Specialization| null;
 }
 
 export interface User extends PrismaUser {
-password?: Password;
-coursePlans: CoursePlan[];
+    password?: Password | null;
+    coursePlans?: CoursePlan[] | null;
 }
 
 export interface Password extends PrismaPassword {
-user: User;
+    user?: User | null;
 }

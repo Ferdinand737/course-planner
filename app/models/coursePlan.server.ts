@@ -1,5 +1,5 @@
 
-import { CoursePlan, DegreeType, ElectiveType, Requirement, Specialization, Course, PlannedCourse } from "../interfaces";
+import { DegreeType, ElectiveType, Requirement, Specialization, Course, PlannedCourse } from "../interfaces";
 import { prisma } from "~/db.server";
 
 export async function getUserCoursePlans(userId: string) {
@@ -52,7 +52,7 @@ export async function setCoursePlan(coursePlanData: any) {
         data: {
           term: pc.term,
           course: {
-            connect: { id: pc.course.id}
+            connect: { id: pc.course?.id}
           },
           alternativeCourses:{
             connect: pc.alternativeCourses?.map((alt: Course) => ({id: alt.id}))

@@ -30,10 +30,10 @@ export default function CourseInfoPanel(props: {
 
 
     const terms = [
-        course.winterTerm1 ? 'Winter Term 1' : '',
-        course.winterTerm2 ? 'Winter Term 2' : '',
-        course.summerTerm1 ? 'Summer Term 1' : '',
-        course.summerTerm2 ? 'Summer Term 2' : '',
+        course?.winterTerm1 ? 'Winter Term 1' : '',
+        course?.winterTerm2 ? 'Winter Term 2' : '',
+        course?.summerTerm1 ? 'Summer Term 1' : '',
+        course?.summerTerm2 ? 'Summer Term 2' : '',
     ].filter(Boolean).join(', ');
 
     const filteredAlternatives = alternatives.filter(alternative =>
@@ -66,14 +66,14 @@ export default function CourseInfoPanel(props: {
     
     return (
         <div className="p-5 my-2 bg-white shadow-md rounded-lg sticky top-0">
-            <h2 className="text-xl font-semibold">{course.name}</h2>
+            <h2 className="text-xl font-semibold">{course?.name}</h2>
             <hr className="my-4" />
-            {course.description && <p className="mb-4">{course.description}</p>}
+            {course?.description && <p className="mb-4">{course?.description}</p>}
             <p><strong>Terms Offered:</strong> {terms || 'Not available'}</p>
-            <p><strong>Duration:</strong> {course.durationTerms} term(s)</p>
-            <p><strong>Credits:</strong> {course.credits}</p>
-            <p><strong>Honours:</strong> {course.isHonours ? 'Yes' : 'No'}</p>
-            {course.preRequisiteString && <p><strong>Pre-requisites:</strong> {course.preRequisiteString}</p>}
+            <p><strong>Duration:</strong> {course?.durationTerms} term(s)</p>
+            <p><strong>Credits:</strong> {course?.credits}</p>
+            <p><strong>Honours:</strong> {course?.isHonours ? 'Yes' : 'No'}</p>
+            {course?.preRequisiteString && <p><strong>Pre-requisites:</strong> {course?.preRequisiteString}</p>}
             {plannedCourse.isElective ? (
                 <>
                     <hr className="my-4" />

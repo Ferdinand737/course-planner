@@ -1,5 +1,5 @@
 
-import { CoursePlan, PlannedCourse } from "@prisma/client";
+import { CoursePlan, PlannedCourse } from "~/interfaces";
 import { prisma } from "~/db.server";
 
 

@@ -1,11 +1,11 @@
-import { Course, DegreeType, PlannedCourse, PrismaClient, SpecializationType } from "@prisma/client";
+import { SpecializationType } from "~/interfaces";
 import bcrypt from "bcryptjs";
 import csv from "csv-parser";
 import fs from "fs";
 import path from "path"; 
 import { HelperCourse, HelperRequirement } from './seedHelper';
+import { prisma } from "~/db.server";
 
-const prisma = new PrismaClient();
 
 async function readCoursesCSV(): Promise<HelperCourse[]> {
   const csvPath = path.resolve(__dirname, "../data-aquisition/data/courses.csv");
