@@ -144,7 +144,7 @@ async function readElectiveTypesCSV() {
             summerTerm2: true,
             faculty: "OTHER",
             preRequisites: "{}",
-            isElectivePlacholder: true,
+            isElectivePlaceholder: true,
           }
         })
       })

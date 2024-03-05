@@ -1,5 +1,6 @@
 import { Course, Faculty, RequirementType } from "~/interfaces";
 import { prisma } from "~/db.server";
+import { Prisma } from "@prisma/client";
 
 export class HelperCourse{
     code: string;
@@ -24,7 +25,7 @@ export class HelperCourse{
 
     constructor(row:any){
         this.code = row["course_code"]
-        this.name = row["name"]
+        this.name = row["name"].replace(this.code, "").trim()
         this.description = row["description"]
         this.credits = Number(row["credits"])
         this.isHonours = row["is_honours"] === "True" ? true : false

@@ -260,21 +260,13 @@ export async function getAlternatives(plannedCourseId: string, searchTerm: strin
         { code: { contains: searchTerm, mode: "insensitive" } },
         { name: { contains: searchTerm, mode: "insensitive" } },
       ],
-      AND: {isElectivePlacholder: false},
+      AND: {isElectivePlaceholder: false},
       id: {
         in: plannedCourse?.alternativeCourses.map((course) => course.id),
       },
     },
   });
 
-  const sortedAlternatives = alternatives.sort((a, b) => {
-    const aCodeMatch = a.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const bCodeMatch = b.code.toLowerCase().includes(searchTerm.toLowerCase());
-    if (aCodeMatch === bCodeMatch) return 0;
-    if (aCodeMatch && !bCodeMatch) return -1;
-    return 1;
-  });
-
-  return sortedAlternatives;
+  return alternatives;
 }
 

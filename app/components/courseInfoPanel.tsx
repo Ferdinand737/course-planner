@@ -37,7 +37,7 @@ export default function CourseInfoPanel(props: {
     ].filter(Boolean).join(', ');
 
     const filteredAlternatives = alternatives.filter(alternative =>
-        alternative.name.toLowerCase().includes(searchTerm.toLowerCase())
+        alternative.name.toLowerCase().includes(searchTerm.toLowerCase()) || alternative.code.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleSelectAlternative = (alternative: Course) => {
@@ -56,8 +56,12 @@ export default function CourseInfoPanel(props: {
                         key={index}
                         onClick={() => handleSelectAlternative(alternative)}
                         className="cursor-pointer p-2 hover:bg-blue-100 transition-colors rounded-md my-1"
-                    >
-                        {alternative.name}
+                    >   
+                        <div>
+                            <p><strong>{alternative.code}</strong></p>
+                            <p><strong>Credits: </strong>{alternative.credits}</p>
+                            <p>{alternative.name}</p>
+                        </div>
                     </li>
                 ))}
             </ul>
@@ -66,6 +70,7 @@ export default function CourseInfoPanel(props: {
     
     return (
         <div className="p-5 my-2 bg-white shadow-md rounded-lg sticky top-0">
+            <h2 className="text-xl font-semibold">{course?.code}</h2>
             <h2 className="text-xl font-semibold">{course?.name}</h2>
             <hr className="my-4" />
             {course?.description && <p className="mb-4">{course?.description}</p>}
