@@ -3,7 +3,8 @@ import { DragDropContext, Droppable, Draggable} from "react-beautiful-dnd";
 import { ArcherContainer, ArcherElement } from 'react-archer';
 import { useLoaderData } from "@remix-run/react";
 import CourseInfoPanel from "~/components/courseInfoPanel";
-import { CoursePlan, PlannedCourse, Course, ElectiveType } from "../components/interfaces";
+import { Course, CoursePlan, PlannedCourse } from "~/interfaces";
+import { message } from "antd";
 
 
 export async function clientLoader({params}: {params: any}) {
@@ -46,6 +47,7 @@ export default function CoursePlanPage(){
     
  
     useEffect(() => {
+
         if (coursePlan && coursePlan.plannedCourses) {
             const numYears = coursePlan.numTerms / 4 ?? 0;
             setGroupedCourses(Object.values(groupByTerm(coursePlan.plannedCourses, numYears * 4)));
@@ -168,8 +170,9 @@ export default function CoursePlanPage(){
         const thisCourse  = thisPlannedCourse.course;
 
         const thisCourseAPreRequisite: PlannedCourse[] = []
-
-        coursePlan?.plannedCourses.forEach(plannedCourse => {
+        
+        coursePlan?.plannedCourses.forEach((plannedCourse: PlannedCourse) => {
+            
             const preRequisites =  extractCourseValues(plannedCourse.course.preRequisites);
 
             for(const preRequisite of preRequisites){
@@ -276,6 +279,14 @@ export default function CoursePlanPage(){
 
     const updateElectiveCourse = (course: PlannedCourse, alternative: Course) => {
         const newGroupedCourses = [...groupedCourses];
+        for (const existingPlanned of newGroupedCourses.flat()) {
+
+
+            if(existingPlanned.course.id === alternative.id){     
+                message.error('This course is already planned');
+                return;
+            }
+        }
         const term = newGroupedCourses[course.term - 1];
         const index = term.findIndex((plannedCourse) => plannedCourse.id === course.id);
         term[index] = {

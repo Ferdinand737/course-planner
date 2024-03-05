@@ -1,5 +1,5 @@
 
-import { DegreeType, ElectiveType, Requirement, Specialization } from "@prisma/client";
+import { CoursePlan, DegreeType, ElectiveType, Requirement, Specialization, Course, PlannedCourse } from "../interfaces";
 import { prisma } from "~/db.server";
 
 export async function getUserCoursePlans(userId: string) {
@@ -43,11 +43,11 @@ export async function setCoursePlan(coursePlanData: any) {
     });
 
     const existingPlannedCoursesMap = new Map(existingPlannedCourses.map(pc => [pc.id, pc]));
-    const incomingPlannedCoursesMap = new Map(plannedCourses.map(pc => [pc.id, pc]));
+    const incomingPlannedCoursesMap = new Map(plannedCourses.map((pc: PlannedCourse) => [pc.id, pc]));
 
     const updates = plannedCourses
-      .filter(pc => existingPlannedCoursesMap.has(pc.id)) // Filter for existing plannedCourses
-      .map(pc => prisma.plannedCourse.update({
+      .filter((pc:PlannedCourse ) => existingPlannedCoursesMap.has(pc.id)) // Filter for existing plannedCourses
+      .map((pc: PlannedCourse) => prisma.plannedCourse.update({
         where: { id: pc.id },
         data: {
           term: pc.term,

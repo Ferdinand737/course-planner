@@ -1,5 +1,5 @@
-import { PlannedCourse, ElectiveType, Course } from './interfaces';
 
+import { Course, ElectiveType, PlannedCourse } from '../interfaces';
 import { useEffect, useState } from 'react';
 
 export default function CourseInfoPanel(props: {
@@ -8,7 +8,8 @@ export default function CourseInfoPanel(props: {
     updateElectiveCourse: (course: PlannedCourse, alternative: Course) => void,
 }) {
     const { plannedCourse, updateElectiveCourse, planId } = props;
-    const course = plannedCourse.course;
+
+    const course = plannedCourse?.course;
     const [searchTerm, setSearchTerm] = useState('');
 
     const [alternatives, setAlternatives] = useState<Course[]>([]);
@@ -19,7 +20,7 @@ export default function CourseInfoPanel(props: {
             const data = await response.json();
             setAlternatives(data.alternativeData);
         }
-        if(plannedCourse.electiveType == "CHOICE" || searchTerm.length > 3){
+        if(plannedCourse.electiveType == ElectiveType.CHOICE || searchTerm.length > 3){
             // "CHOICE" Type electives usually only have a few alternatives, so we just get them all
             fetchAlternatives();
         }else{
