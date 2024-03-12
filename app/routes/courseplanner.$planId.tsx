@@ -4,8 +4,9 @@ import { ArcherContainer, ArcherElement } from 'react-archer';
 import { useLoaderData } from "@remix-run/react";
 import CourseInfoPanel from "~/components/courseInfoPanel";
 import { Course, CoursePlan, PlannedCourse } from "~/interfaces";
-import { message } from "antd";
-import { Prisma } from "@prisma/client";
+import { Button, message } from "antd";
+import { Tooltip } from 'antd';
+import { ExclamationCircleOutlined, PlusOutlined, MinusOutlined } from '@ant-design/icons';
 
 
 export async function clientLoader({params}: {params: any}) {
@@ -54,6 +55,7 @@ export default function CoursePlanPage(){
             setGroupedCourses(Object.values(groupByTerm(coursePlan.plannedCourses, numYears * 4)));
         }
     }, [coursePlan]);
+
 
     useEffect(() => {
         async function postCoursePlan(){
@@ -149,6 +151,90 @@ export default function CoursePlanPage(){
 
     function RenderCourse(props:{ plannedCourse: PlannedCourse, idx: number }){
 
+        const { idx } = props;
+        const  thisPlannedCourse  = props.plannedCourse
+
+        function courseIsInPlan(courseCode: string){
+            return coursePlan?.plannedCourses?.some((plannedCourse) => plannedCourse.course?.code === courseCode);
+        }
+
+        function getCourseTerm(courseCode: string){
+            return Number(coursePlan?.plannedCourses?.find((plannedCourse) => plannedCourse.course?.code === courseCode)?.term);
+        }
+
+
+        function checkPreRequisites(node: { type: string; subtype: string; value: any; childNodes: any[]; } | any) {
+
+            let failedConditions: string[] = []; 
+
+            // This is for courses without pre-requisites
+            if (!node.subtype) {
+                return { result: true, failedConditions: [] };
+            }
+
+            const thisNodeSubType = node.subtype.toUpperCase();
+            
+            if (thisNodeSubType === "COURSE") {
+                const isInPlan = courseIsInPlan(node.value) && getCourseTerm(node.value) < thisPlannedCourse.term;
+                return { 
+                    result: isInPlan, 
+                    failedConditions: isInPlan ? [] : [`Course ${node.value} is not in plan`]
+                };
+            }
+        
+            if (thisNodeSubType=== "AND" || thisNodeSubType === "GRADE") {
+                const allPassed = node.childNodes.every((child:{ type: string; subtype: string; value: any; childNodes: any[]; }) => {
+                    const { result, failedConditions: childFailed } = checkPreRequisites(child);
+                    failedConditions = failedConditions.concat(childFailed);
+                    return result;
+                });
+                return { result: allPassed, failedConditions };
+            }
+        
+            if (thisNodeSubType === "OR") {
+                let passed = false;
+                node.childNodes.forEach((child:{ type: string; subtype: string; value: any; childNodes: any[]; }) => {
+                    const { result, failedConditions: childFailed } = checkPreRequisites(child);
+                    if (result) {
+                        passed = true;
+                    } else {
+                        failedConditions = failedConditions.concat(childFailed);
+                    }
+                });
+                return { result: passed, failedConditions: passed ? [] : failedConditions };
+            }
+        
+            if (thisNodeSubType === "N_OF") {
+                let count = 0;
+                node.childNodes.forEach((child:{ type: string; subtype: string; value: any; childNodes: any[]; }) => {
+                    const { result, failedConditions: childFailed } = checkPreRequisites(child);
+                    if (result) {
+                        count++;
+                    } else {
+                        failedConditions = failedConditions.concat(childFailed);
+                    }
+                });
+                const n = node.value;
+                return { 
+                    result: count >= n, 
+                    failedConditions: count >= n ? [] : [`N_OF (${n}): only ${count} conditions passed`]
+                };
+            }
+        
+                  
+            if (thisNodeSubType === "YEAR") {
+                const yearRequirement = Math.floor((thisPlannedCourse.term - 1) / 4) + 1 >= Number(node.value);
+                return { 
+                    result: yearRequirement, 
+                    failedConditions: yearRequirement ? [] : [`Year requirement ${node.value} not met`]
+                };
+            }
+        
+            // Return a default failure case for unknown types
+            return { result: true, failedConditions: [`Unknown subtype ${thisNodeSubType}`] };
+        }
+        
+
         function extractCourseValues(node: { type: string; subtype: string; value: any; childNodes: any[]; } | any) {
      
             let courses: any[] = [];
@@ -165,10 +251,6 @@ export default function CoursePlanPage(){
             return courses;
         }
         
- 
-        const { idx } = props;
-        const  thisPlannedCourse  = props.plannedCourse
-
         const thisCourse  = thisPlannedCourse.course;
 
         const thisCourseAPreRequisite: PlannedCourse[] = []
@@ -184,8 +266,21 @@ export default function CoursePlanPage(){
             }
         });
 
-        const courseColor = !thisPlannedCourse.isElective ? '#7ddcff':thisPlannedCourse.electiveType == "CHOICE" ? '#aaffaa' : '#f7c3b1';
+        let courseColor = '#7ddcff';
 
+        if(thisPlannedCourse.isElective){
+            if(thisPlannedCourse.electiveType == "CHOICE"){
+                courseColor = '#aaffaa';
+            }else{
+                courseColor = '#ff7de7';
+            }
+        }
+
+        const check = checkPreRequisites(thisCourse?.preRequisites);
+
+        if(check.result !== true){
+            courseColor = '#f7576f';
+        }
 
         return(
             <>
@@ -214,16 +309,23 @@ export default function CoursePlanPage(){
                                 }))
                             }
                         >
-                            <div className="p-2 m-2 rounded-full w-18 h-18 flex items-center justify-center" 
+                        <div className="p-2 m-2 rounded-full w-18 h-18 flex items-center justify-center" 
                                 style={{ position: 'relative', zIndex: 1, backgroundColor: courseColor}}
-                                onMouseEnter={() => setHoveredCourseId(thisPlannedCourse.id)}
-                                onClick={() => setSelectedCourse(thisPlannedCourse)}
-                                // onMouseLeave={() => setHoveredCourseId(null)}  // this line breaks dragging             
-                            >
-                                <p style={{ fontSize: '0.8rem' }}>{thisCourse?.code}</p> 
-                            </div>
+                             onMouseEnter={() => setHoveredCourseId(thisPlannedCourse.id)}
+                             onClick={() => {
+                                 console.log(thisPlannedCourse);
+                                 console.log(check);
+                                 setSelectedCourse(thisPlannedCourse);
+                             }}
+                        >
+                            {check.result !== true && (
+                                <Tooltip title={`Failed Conditions: ${check.failedConditions.join(', ')}`}>
+                                    <ExclamationCircleOutlined className="absolute top-0 right-0 text-red-500" style={{ fontSize: '16px', transform: 'translate(50%, -50%)' }}/>
+                                </Tooltip>
+                            )}
+                            <p style={{ fontSize: '0.8rem' }}>{thisCourse?.code}</p> 
+                        </div>
                         </ArcherElement>
-
                     </div>
                 )}
             </Draggable>
@@ -237,14 +339,26 @@ export default function CoursePlanPage(){
         const absoluteTerm = idx + 1;
         const year = Math.floor((absoluteTerm - 1) / 4) + 1;
         const showYear = idx % 4 === 0;
+        const canRemove = groupedCourses.slice((year - 1) * 4, year * 4).flat().length == 0;
 
         return(
                 <>
                 {showYear && (
                     <div className="flex items-baseline space-x-2 mt-4 mb-2">
-                    <h1 className="text-xl font-semibold text-gray-800">
-                        Year {year}
-                    </h1>
+                        <h1 className="text-xl font-semibold text-gray-800">
+                            Year {year}
+                        </h1>
+                        {
+                            canRemove && (
+                                <Tooltip title="Remove Year">
+                                    <Button 
+                                        icon={<MinusOutlined />} 
+                                        onClick={() => removeYear(year)}
+                                        className="p-1"
+                                    />
+                                </Tooltip>
+                            )
+                        }
                     </div>
                 )}
                 <Droppable
@@ -282,8 +396,6 @@ export default function CoursePlanPage(){
     const updateElectiveCourse = (course: PlannedCourse, alternative: Course) => {
         const newGroupedCourses = [...groupedCourses];
         for (const existingPlanned of newGroupedCourses.flat()) {
-
-
             if(existingPlanned?.course?.id === alternative.id){     
                 message.error('This course is already planned');
                 return;
@@ -298,6 +410,44 @@ export default function CoursePlanPage(){
         setGroupedCourses(newGroupedCourses);
     }
 
+    const addYear = () => {
+        setCoursePlan((prevState: CoursePlan | null) => ({
+            ...prevState!,
+            numTerms: prevState!.numTerms + 4
+        }));
+    };
+
+    const removeYear = (year:number) => {
+        const yearToRemove = groupedCourses.slice((year - 1) * 4, year * 4);
+        const flattenedYear = yearToRemove.flat();
+
+        const startIdx = (year - 1) * 4;
+        const endIdx = year * 4;
+
+        if (flattenedYear.length > 0) {
+            message.error('Cannot remove year with planned courses');
+            return;
+        }
+
+        const updatedGroupedCourses = groupedCourses
+        .filter((_, index) => index < startIdx || index >= endIdx)
+        .map((termGroup, index) => {
+            // Only adjust terms that come after the removed year.
+            if (index >= startIdx) {
+                return termGroup.map(plannedCourse => ({
+                    ...plannedCourse,
+                    term: plannedCourse.term - 4
+                }));
+            }
+            return termGroup;
+        });
+
+        setCoursePlan((prevState: CoursePlan | null) => ({
+            ...prevState!,
+            plannedCourses:updatedGroupedCourses.flat(),
+            numTerms: prevState!.numTerms - 4
+        }));
+    }
 
     return (
         <div className="flex h-full min-h-screen"> 
@@ -311,6 +461,16 @@ export default function CoursePlanPage(){
                         </div>
                     </DragDropContext>
                 </ArcherContainer>
+                <div className="bg-primary w-full">
+                <Button 
+                    type="primary" 
+                    icon={<PlusOutlined />} 
+                    className="m-2 w-full text-white bg-blue-600 hover:bg-blue-700"
+                    onClick={addYear} // Add this line
+                >
+                    Add Year
+                </Button>
+            </div>
             </div>
             {selectedCourse && coursePlan ? (
                 <div className="w-80">

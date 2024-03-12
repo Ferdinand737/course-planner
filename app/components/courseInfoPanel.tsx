@@ -67,14 +67,14 @@ export default function CourseInfoPanel(props: {
             </ul>
         );
     };
-    
+
     return (
         <div className="p-5 my-2 bg-white shadow-md rounded-lg sticky top-0">
             <h2 className="text-xl font-semibold">{course?.code}</h2>
             <h2 className="text-xl font-semibold">{course?.name}</h2>
             <hr className="my-4" />
             {course?.description && <p className="mb-4">{course?.description}</p>}
-            <p><strong>Terms Offered:</strong> {terms || 'Not available'}</p>
+            {/* <p><strong>Terms Offered:</strong> {terms || 'Not available'}</p> */}
             <p><strong>Duration:</strong> {course?.durationTerms} term(s)</p>
             <p><strong>Credits:</strong> {course?.credits}</p>
             <p><strong>Honours:</strong> {course?.isHonours ? 'Yes' : 'No'}</p>
