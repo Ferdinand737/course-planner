@@ -3,6 +3,7 @@ import { ArcherElement } from "react-archer";
 import { Draggable } from "react-beautiful-dnd";
 import { CoursePlan, PlannedCourse } from "~/interfaces";
 import { ExclamationCircleOutlined } from '@ant-design/icons';
+import React from "react";
 
 
 export default function CourseComponent(props: {
@@ -16,7 +17,7 @@ export default function CourseComponent(props: {
     const { idx, coursePlan, hoveredCourseId, selectCourse, hoverCourse } = props;
 
     const thisPlannedCourse = props.plannedCourse;
-    const thisCourse = props.plannedCourse.course;
+    const thisCourse = props.plannedCourse?.course;
 
 
     function courseIsInPlan(courseCode: string){
@@ -33,72 +34,73 @@ export default function CourseComponent(props: {
 
         let failedConditions: string[] = []; 
 
-        // This is for courses without pre-requisites
+        // Base case: No subtype means no pre-requisites
         if (!node.subtype) {
             return { result: true, failedConditions: [] };
         }
-
+    
         const thisNodeSubType = node.subtype.toUpperCase();
         
+        // Case for individual courses
         if (thisNodeSubType === "COURSE") {
             const isInPlan = courseIsInPlan(node.value) && getCourseTerm(node.value) < thisPlannedCourse.term;
-            return { 
-                result: isInPlan, 
-                failedConditions: isInPlan ? [] : [`Course ${node.value} is not in plan`]
-            };
+            if (!isInPlan) {
+                failedConditions.push(`${node.value} is not in plan`);
+            }
+            return { result: isInPlan, failedConditions };
         }
     
-        if (thisNodeSubType=== "AND" || thisNodeSubType === "GRADE") {
-            const allPassed = node.childNodes.every((child:{ type: string; subtype: string; value: any; childNodes: any[]; }) => {
-                const { result, failedConditions: childFailed } = checkPreRequisites(child);
-                failedConditions = failedConditions.concat(childFailed);
-                return result;
+        // Handling AND logic
+        if (thisNodeSubType === "AND" || thisNodeSubType === "GRADE") {
+            node.childNodes.forEach((child: { type: string; subtype: string; value: any; childNodes: any[]; }) => {
+                const childResult = checkPreRequisites(child);
+                if (!childResult.result) {
+                    failedConditions = [...failedConditions, ...childResult.failedConditions];
+                }
             });
-            return { result: allPassed, failedConditions };
+            return { result: failedConditions.length === 0, failedConditions };
         }
     
+        // Handling OR logic
         if (thisNodeSubType === "OR") {
             let passed = false;
-            node.childNodes.forEach((child:{ type: string; subtype: string; value: any; childNodes: any[]; }) => {
-                const { result, failedConditions: childFailed } = checkPreRequisites(child);
-                if (result) {
+            node.childNodes.forEach((child: { type: string; subtype: string; value: any; childNodes: any[]; }) => {
+                const childResult = checkPreRequisites(child);
+                if (childResult.result) {
                     passed = true;
                 } else {
-                    failedConditions = failedConditions.concat(childFailed);
+                    failedConditions = [...failedConditions, ...childResult.failedConditions];
                 }
             });
             return { result: passed, failedConditions: passed ? [] : failedConditions };
         }
     
+        // Handling N_OF logic
         if (thisNodeSubType === "N_OF") {
             let count = 0;
-            node.childNodes.forEach((child:{ type: string; subtype: string; value: any; childNodes: any[]; }) => {
-                const { result, failedConditions: childFailed } = checkPreRequisites(child);
-                if (result) {
+            node.childNodes.forEach((child: { type: string; subtype: string; value: any; childNodes: any[]; }) => {
+                const childResult = checkPreRequisites(child);
+                if (childResult.result) {
                     count++;
                 } else {
-                    failedConditions = failedConditions.concat(childFailed);
+                    failedConditions = [...failedConditions, ...childResult.failedConditions];
                 }
             });
-            const n = node.value;
-            return { 
-                result: count >= n, 
-                failedConditions: count >= n ? [] : [`N_OF (${n}): only ${count} conditions passed`]
-            };
+
+            return { result: count >= node.value, failedConditions };
         }
     
-              
+        // Handling YEAR logic
         if (thisNodeSubType === "YEAR") {
             const yearRequirement = Math.floor((thisPlannedCourse.term - 1) / 4) + 1 >= Number(node.value);
-            return { 
-                result: yearRequirement, 
-                failedConditions: yearRequirement ? [] : [`Year requirement ${node.value} not met`]
-            };
+            if (!yearRequirement) failedConditions.push(`Year requirement ${node.value} not met`);
+            return { result: yearRequirement, failedConditions };
         }
     
-        // Return a default failure case for unknown types
+        // Handling unknown types
         return { result: true, failedConditions: [`Unknown subtype ${thisNodeSubType}`] };
     }
+    
 
 
     function getThisCoursePostRequisites(thisPlannedCourse: PlannedCourse){
@@ -191,9 +193,20 @@ export default function CourseComponent(props: {
                          }}
                     >
                         {check.result !== true && (
-                            <Tooltip title={`Failed Conditions: ${check.failedConditions.join(', ')}`}>
-                                <ExclamationCircleOutlined className="absolute top-0 right-0 text-red-500" style={{ fontSize: '16px', transform: 'translate(50%, -50%)' }}/>
-                            </Tooltip>
+                           <Tooltip 
+                           title={
+                               <div>
+                                   <strong>Missing Pre-Requisites</strong>
+                                   {check.failedConditions.map((condition, index) => (
+                                       <React.Fragment key={index}>
+                                           <br />{condition}
+                                       </React.Fragment>
+                                   ))}
+                               </div>
+                           }
+                       >
+                           <ExclamationCircleOutlined className="absolute top-0 right-0 text-red-500" style={{ fontSize: '16px', transform: 'translate(50%, -50%)' }}/>
+                       </Tooltip>
                         )}
                         <p style={{ fontSize: '0.8rem' }}>{thisCourse?.code}</p> 
                     </div>

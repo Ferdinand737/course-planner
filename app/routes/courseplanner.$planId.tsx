@@ -176,7 +176,11 @@ export default function CoursePlanPage(){
             ...course,
             course: alternative,
         };
-        setGroupedCourses(newGroupedCourses);
+
+        setCoursePlan((prevState: CoursePlan | null) => ({
+            ...prevState!,
+            plannedCourses: newGroupedCourses.flat()
+        }));
     }
 
 
