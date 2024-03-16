@@ -199,19 +199,19 @@ export class HelperRequirement{
         }
     }
 
-    async findUpperLevelCourses():Promise<Course[]>{
+    async findUpperLevelCourses(): Promise<Course[]> {
         const query = Prisma.sql`
-            SELECT * FROM "Course"
-            WHERE "code" ~ '^[A-Z]{4}\\s[34]'
+            SELECT * FROM \`Course\`
+            WHERE \`code\` LIKE '________ 3' OR \`code\` LIKE '________ 4'
         `;
         const courses = await prisma.$queryRaw<Course[]>(query);
         return courses;
     }
-
-    async findYearCourses(year:number):Promise<Course[]>{
+    
+    async findYearCourses(year: number): Promise<Course[]> {
         const query = Prisma.sql`
-            SELECT * FROM "Course"
-            WHERE "code" ~ '^[A-Z]{4}\\s${year}'
+            SELECT * FROM \`Course\`
+            WHERE CONCAT('________ ', ${year}) LIKE \`code\`
         `;
         const courses = await prisma.$queryRaw<Course[]>(query);
         return courses

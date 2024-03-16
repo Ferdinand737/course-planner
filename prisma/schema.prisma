@@ -1,5 +1,5 @@
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -126,7 +126,7 @@ model Course {
   id          String  @id @default(cuid())
   code        String  @unique
   name        String
-  description String?
+  description String? @db.LongText
   isElectivePlaceholder  Boolean @default(false)// Special type of placeholder course
   winterTerm1 Boolean @default(false)
   winterTerm2 Boolean @default(false)
@@ -136,7 +136,7 @@ model Course {
   credits       Float   @default(3)
   isHonours     Boolean @default(false)
   faculty Faculty
-  preRequisiteString String?
+  preRequisiteString String? @db.LongText
 
   requirements Requirement[] @relation("CourseRequirements")
 
