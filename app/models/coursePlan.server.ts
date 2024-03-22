@@ -209,6 +209,9 @@ export async function createCoursePlan(planName: string, specializations: Specia
           }else{
             electiveTypeStr = ElectiveType.ELEC
           }
+
+          const thisCourseAlternative = alternatives.filter(alt => !alt.isElectivePlaceholder);
+          thisCourseAlternative.push(electiveCourse);
           
           let elecCredits = 0;
 
@@ -234,7 +237,7 @@ export async function createCoursePlan(planName: string, specializations: Specia
                   },
                 },
                 alternativeCourses: {
-                  connect: alternatives.map(alt => ({ id: alt.id }))
+                  connect: thisCourseAlternative.map(alt => ({ id: alt.id }))
                 }
               },
             });
@@ -244,7 +247,6 @@ export async function createCoursePlan(planName: string, specializations: Specia
       }
     }
   }
-  
 }
 
 export async function getAlternatives(plannedCourseId: string, searchTerm: string) {
@@ -254,19 +256,16 @@ export async function getAlternatives(plannedCourseId: string, searchTerm: strin
       alternativeCourses: true,
     },
   });
-  const alternatives = await prisma.course.findMany({
-    where: {
-      OR: [
-        { code: { contains: searchTerm, mode: "insensitive" } },
-        { name: { contains: searchTerm, mode: "insensitive" } },
-      ],
-      AND: {isElectivePlaceholder: false},
-      id: {
-        in: plannedCourse?.alternativeCourses.map((course) => course.id),
-      },
+  return plannedCourse?.alternativeCourses.filter(alt => !alt.isElectivePlaceholder && (alt.code.includes(searchTerm) || alt.name.includes(searchTerm)));
+}
+
+export async function getElectivePlaceholder(plannedCourseId: string) {
+  const plannedCourse = await prisma.plannedCourse.findUnique({
+    where: { id: plannedCourseId },
+    include: {
+      alternativeCourses: true,
     },
   });
-
-  return alternatives;
+  return plannedCourse?.alternativeCourses.find(alt => alt.isElectivePlaceholder);
 }
 

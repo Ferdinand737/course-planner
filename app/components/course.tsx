@@ -1,8 +1,8 @@
 import { Tooltip } from "antd";
 import { ArcherElement } from "react-archer";
 import { Draggable } from "react-beautiful-dnd";
-import { CoursePlan, PlannedCourse } from "~/interfaces";
-import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { Course, CoursePlan, ElectiveType, PlannedCourse } from "~/interfaces";
+import { ExclamationCircleOutlined, RetweetOutlined } from '@ant-design/icons';
 import React from "react";
 
 
@@ -11,10 +11,11 @@ export default function CourseComponent(props: {
     idx: number,
     hoveredCourseId: string|undefined,
     coursePlan: CoursePlan|null,
-    selectCourse: (plannedCourse: PlannedCourse) => void
-    hoverCourse: (plannedCourse: PlannedCourse) => void
+    selectCourse: (plannedCourse: PlannedCourse) => void,
+    hoverCourse: (plannedCourse: PlannedCourse) => void,
+    updateElectiveCourse: (course: PlannedCourse, alternative: Course) => void,
 }) {
-    const { idx, coursePlan, hoveredCourseId, selectCourse, hoverCourse } = props;
+    const { idx, coursePlan, hoveredCourseId, selectCourse, hoverCourse, updateElectiveCourse } = props;
 
     const thisPlannedCourse = props.plannedCourse;
     const thisCourse = props.plannedCourse?.course;
@@ -142,17 +143,18 @@ export default function CourseComponent(props: {
     let courseColor = '#7ddcff';
 
     if(thisPlannedCourse.isElective){
-        if(thisPlannedCourse.electiveType == "CHOICE"){
-            courseColor = '#aaffaa';
+        if(thisPlannedCourse.electiveType == ElectiveType.CHOICE){
+            courseColor = '#8ef58e';
         }else{
-            courseColor = '#ff7de7';
+            courseColor = '#af91db';
         }
     }
 
     const check = checkPreRequisites(thisCourse?.preRequisites);
 
+    let borderColor = courseColor;
     if(check.result !== true){
-        courseColor = '#f7576f';
+        borderColor = '#f7576f';
     }
 
     
@@ -184,11 +186,9 @@ export default function CourseComponent(props: {
                         }
                     >
                     <div className="p-2 m-2 rounded-full w-18 h-18 flex items-center justify-center" 
-                            style={{ position: 'relative', zIndex: 1, backgroundColor: courseColor}}
+                            style={{ position: 'relative', zIndex: 1, backgroundColor: courseColor, borderColor: borderColor, borderWidth: '3px', borderStyle: 'solid'}}
                          onMouseEnter={() => hoverCourse(thisPlannedCourse)}
                          onClick={() => {
-                             console.log(thisPlannedCourse);
-                             console.log(check);
                              selectCourse(thisPlannedCourse);
                          }}
                     >
@@ -208,6 +208,26 @@ export default function CourseComponent(props: {
                            <ExclamationCircleOutlined className="absolute top-0 right-0 text-red-500" style={{ fontSize: '16px', transform: 'translate(50%, -50%)' }}/>
                        </Tooltip>
                         )}
+                            {thisPlannedCourse.isElective && (
+                                <Tooltip
+                                title={'Reset Elective'}>
+
+                                    <RetweetOutlined 
+                                        className="absolute bottom-0 right-0 text-blue-600 cursor-pointer" 
+                                        style={{ 
+                                            fontSize: '16px', 
+                                            transform: 'translate(50%, 50%)'
+                                        }}
+                                        onClick={async () => {
+                                            const response = await fetch(`/coursePlanAPI/${coursePlan?.id}?plannedCourseId=${thisPlannedCourse.id}&resetElective=true`);
+                                            const data = await response.json();
+                                            updateElectiveCourse(thisPlannedCourse, data.electiveCourse)
+                                        }}
+                                    />
+
+                                </Tooltip>
+                        )}
+
                         <p style={{ fontSize: '0.8rem' }}>{thisCourse?.code}</p> 
                     </div>
                     </ArcherElement>

@@ -1,4 +1,4 @@
-import { CoursePlan, PlannedCourse } from "~/interfaces";
+import { Course, CoursePlan, PlannedCourse } from "~/interfaces";
 import CourseComponent from "./course";
 import { Button, Tooltip } from "antd";
 import { Droppable } from "react-beautiful-dnd";
@@ -13,8 +13,9 @@ export default function TermComponent(props: {
     selectCourse: (plannedCourse: PlannedCourse) => void,
     hoverCourse: (plannedCourse: PlannedCourse) => void,
     removeYear: (year: number) => void,
+    updateElectiveCourse: (plannedCourse: PlannedCourse, alternative: Course) => void
 }) {
-    const { term, coursePlan, selectCourse, hoverCourse, removeYear, hoveredCourseId, idx, groupedCourses } = props;
+    const { term, coursePlan, selectCourse, hoverCourse, removeYear,updateElectiveCourse, hoveredCourseId, idx, groupedCourses } = props;
 
     const termNames = ["Winter 1", "Winter 2", "Summer 1", "Summer 2"];
     const absoluteTerm = idx + 1;
@@ -64,13 +65,14 @@ export default function TermComponent(props: {
                     <div className="flex flex-wrap justify-center gap-5 w-full">
                         {term.map((plannedCourse, idx) => (
                             <CourseComponent 
-                            key={plannedCourse.id} 
-                            plannedCourse={plannedCourse} 
-                            idx={idx} 
-                            coursePlan={coursePlan}
-                            selectCourse={selectCourse}
-                            hoverCourse={hoverCourse}
-                            hoveredCourseId={hoveredCourseId}
+                                key={plannedCourse.id} 
+                                plannedCourse={plannedCourse} 
+                                idx={idx} 
+                                coursePlan={coursePlan}
+                                selectCourse={selectCourse}
+                                hoverCourse={hoverCourse}
+                                updateElectiveCourse={updateElectiveCourse}
+                                hoveredCourseId={hoveredCourseId}
                             />
                         ))}
                     </div>

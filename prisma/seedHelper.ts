@@ -1,6 +1,7 @@
 import { Course, Faculty, RequirementType } from "~/interfaces";
 import { prisma } from "~/db.server";
 import { Prisma } from "@prisma/client";
+import { al } from "vitest/dist/reporters-5f784f42";
 
 export class HelperCourse{
     code: string;
@@ -201,20 +202,21 @@ export class HelperRequirement{
 
     async findUpperLevelCourses(): Promise<Course[]> {
         const query = Prisma.sql`
-            SELECT * FROM \`Course\`
-            WHERE \`code\` LIKE '________ 3' OR \`code\` LIKE '________ 4'
+        SELECT * FROM \`Course\`
+        WHERE \`code\` REGEXP ' [3-5]'
         `;
         const courses = await prisma.$queryRaw<Course[]>(query);
         return courses;
     }
     
     async findYearCourses(year: number): Promise<Course[]> {
+        const stryear = ' ' + String(year)
         const query = Prisma.sql`
             SELECT * FROM \`Course\`
-            WHERE CONCAT('________ ', ${year}) LIKE \`code\`
+            WHERE \`code\` REGEXP ${stryear}
         `;
         const courses = await prisma.$queryRaw<Course[]>(query);
-        return courses
+        return courses;
     }
 
     async findScienceCourses(){

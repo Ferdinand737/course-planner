@@ -1,4 +1,4 @@
-import { SpecializationType } from "~/interfaces";
+import { Faculty, SpecializationType } from "~/interfaces";
 import bcrypt from "bcryptjs";
 import csv from "csv-parser";
 import fs from "fs";
@@ -142,7 +142,7 @@ async function readElectiveTypesCSV() {
             winterTerm2: true,
             summerTerm1: true,
             summerTerm2: true,
-            faculty: "OTHER",
+            faculty: Faculty.OTHER,
             preRequisites: "{}",
             isElectivePlaceholder: true,
           }

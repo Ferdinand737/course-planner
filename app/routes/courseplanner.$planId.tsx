@@ -7,6 +7,7 @@ import { Course, CoursePlan, PlannedCourse } from "~/interfaces";
 import { Button, message } from "antd";
 import { PlusOutlined } from '@ant-design/icons';
 import TermComponent from "~/components/term";
+import CoursePlanInfoPanel from "~/components/coursePlanInfoPanel";
 
 
 export async function clientLoader({params}: {params: any}) {
@@ -89,7 +90,6 @@ export default function CoursePlanPage(){
         )
     }
 
-
     const move = (source:  PlannedCourse[], destination: PlannedCourse[], droppableSource:any, droppableDestination:any) => {
         const sourceClone = Array.from(source);
         const destClone = Array.from(destination);
@@ -164,10 +164,13 @@ export default function CoursePlanPage(){
 
     const updateElectiveCourse = (course: PlannedCourse, alternative: Course) => {
         const newGroupedCourses = [...groupedCourses];
-        for (const existingPlanned of newGroupedCourses.flat()) {
-            if(existingPlanned?.course?.id === alternative.id){     
-                message.error('This course is already planned');
-                return;
+
+        if(!alternative?.isElectivePlaceholder){
+            for (const existingPlanned of newGroupedCourses.flat()) {
+                if(existingPlanned?.course?.id === alternative.id){     
+                    message.error('This course is already planned');
+                    return;
+                }
             }
         }
         const term = newGroupedCourses[course.term - 1];
@@ -224,10 +227,14 @@ export default function CoursePlanPage(){
         }));
     }
 
+    function updateCoursePlan(coursePlan: CoursePlan| null){
+        setCoursePlan(coursePlan);
+    }
     
     return (
         <div className="flex h-full min-h-screen"> 
-            <div className="flex-1"> 
+            <div className="flex-1">
+                <CoursePlanInfoPanel coursePlan={coursePlan} updateCoursePlan={updateCoursePlan} />
                 <ArcherContainer>
                     <DragDropContext onDragEnd={onDragEnd}>
                         <div>
@@ -240,6 +247,7 @@ export default function CoursePlanPage(){
                                     selectCourse={selectCourse}
                                     hoverCourse={hoverCourse}
                                     removeYear={removeYear}
+                                    updateElectiveCourse={updateElectiveCourse}
                                     groupedCourses={groupedCourses}
                                     hoveredCourseId={hoveredCourseId}   
                                 />
