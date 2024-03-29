@@ -61,8 +61,17 @@ function parseSpecializationFromFileName(fileName: string) {
   const parts = fileName.split('-');
   const discipline = parts[1];
   let rawType = parts[2].split('.')[0].toUpperCase();
+
+  let specializationType: SpecializationType = SpecializationType.MAJOR;
+
+  if (rawType === "MINOR"){
+    specializationType = SpecializationType.MINOR;
+  }
+
+  if (rawType === "HONOURS"){
+    specializationType = SpecializationType.HONOURS;
+  }
   
-  let specializationType: SpecializationType = rawType === "MAJOR" ? SpecializationType.MAJOR : SpecializationType.MINOR;
 
   return { discipline, specializationType };
 }
@@ -89,11 +98,17 @@ async function readSpecializationsCSVs() {
   const fileNames = fs.readdirSync(directoryPath);
 
   for (const fileName of fileNames) {
+
     // Create a specialization for each file in ../data-aquisition/data/degrees
     const { discipline, specializationType } = parseSpecializationFromFileName(fileName);
+
+    const hons = specializationType === SpecializationType.HONOURS ? " (Honours)" : "";
+
+    const name = mappings[discipline as keyof typeof mappings] + hons
+
     const specialization = await prisma.specialization.create({
       data: {
-        name: mappings[discipline as keyof typeof mappings],
+        name: name,
         discipline,
         specializationType,
       },

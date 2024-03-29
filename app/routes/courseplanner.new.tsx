@@ -8,7 +8,15 @@ import { requireUserId } from "~/session.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
     await requireUserId(request);
-    const availableMajors = await prisma.specialization.findMany({where: {specializationType: SpecializationType.MAJOR}})
+    const availableMajors = await prisma.specialization.findMany({
+        where: {
+          OR: [
+            { specializationType: SpecializationType.MAJOR },
+            { specializationType: SpecializationType.HONOURS },
+          ],
+        },
+      });
+
     const availableMinors = await prisma.specialization.findMany({where: {specializationType: SpecializationType.MINOR}})
     return json({ availableMajors, availableMinors});
 }
@@ -64,17 +72,10 @@ export async function action({ request }: ActionFunctionArgs) {
             return json({ errors, message: "Failure" }, { status: 400 });
         }
 
-        const specializations: Specialization[] = []
-
-
         if(planName) {
             if (major){
-                specializations.push(major);
+                await createCoursePlan(planName, major, minor, userId);
             }
-            if (minor){
-                specializations.push(minor);
-            }
-            await createCoursePlan(planName, specializations, userId);
         }
 
         return json({ errors: null, message: "Success" }, { status: 201 });

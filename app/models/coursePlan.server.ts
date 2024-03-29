@@ -118,7 +118,13 @@ export async function setCoursePlan(coursePlanData: any) {
   });
 }
 
-export async function createCoursePlan(planName: string, specializations: Specialization[], userId: string) {
+export async function createCoursePlan(planName: string, major: Specialization, minor: Specialization|undefined, userId: string) {
+
+  const specializations = [major];
+
+  if(minor){
+    specializations.push(minor);
+  }
 
   // Create a new degree with desired major/minor combination
   const degree = await prisma.degree.create({
@@ -148,95 +154,108 @@ export async function createCoursePlan(planName: string, specializations: Specia
     },
   });
   
-  for (const specialization of specializations){
+  const requirements = (major as Specialization & { requirements: Requirement[] })?.requirements;
 
-    const requirements = (specialization as Specialization & { requirements: Requirement[] })?.requirements;
+  for (const requirement of requirements) {
+    const credits = requirement.credits;
+    const alternatives = (requirement as Requirement & { alternatives: Course[] }).alternatives;
+    const electiveCourse = (requirement as Requirement & { electiveCourse: Course }).electiveCourse;
 
-    for (const requirement of requirements) {
-      const credits = requirement.credits;
-      const alternatives = (requirement as Requirement & { alternatives: Course[] }).alternatives;
-      const electiveCourse = (requirement as Requirement & { electiveCourse: Course }).electiveCourse;
+    if (alternatives.length > 0) {
 
-      if (alternatives.length > 0) {
+      // Find the total credits in the alternatives, this number could be very large if this requirement is a general 'ELEC'
+      let creditsInAlternatives = alternatives.reduce((accumulator, alternative) => accumulator + alternative.credits, 0);
 
-        // Find the total credits in the alternatives, this number could be very large if this requirement is a general 'ELEC'
-        let creditsInAlternatives = alternatives.reduce((accumulator, alternative) => accumulator + alternative.credits, 0);
+      /* The below if staments only executes when all courses in the 'Alternatives' column are required. 
+        For example in 'BSc-MATH-Major.csv': 'Alternatives'=MATH100;MATH101 and credits=6
+        So all courses in the alternatives are required to be taken to satisfy the requirement
+      */
+      if (creditsInAlternatives == credits){
 
-        /* The below if staments only executes when all courses in the 'Alternatives' column are required. 
-          For example in 'BSc-MATH-Major.csv': 'Alternatives'=MATH100;MATH101 and credits=6
-          So all courses in the alternatives are required to be taken to satisfy the requirement
-        */
-        if (creditsInAlternatives == credits){
+        for (const alternative of alternatives) {
 
-          for (const alternative of alternatives) {
- 
-            const term = getRandomTerm(requirement, alternative);
+          const term = getRandomTerm(requirement, alternative);
 
-            // Create the planned course in the database
-            await prisma.plannedCourse.create({
-              data: {
-                term,
-                course: {
-                  connect: {
-                    id: alternative.id,
-                  },
-                },
-                coursePlan: {
-                  connect: {
-                    id: coursePlan.id,
-                  },
+          // Create the planned course in the database
+          await prisma.plannedCourse.create({
+            data: {
+              term,
+              course: {
+                connect: {
+                  id: alternative.id,
                 },
               },
-            });
-          }
-        }else if(electiveCourse){
+              coursePlan: {
+                connect: {
+                  id: coursePlan.id,
+                },
+              },
+            },
+          });
+        }
+      }else if(electiveCourse){
 
-          // Find the elective type based on elective course code
-          // This could be done in a better way
-          let electiveTypeStr = electiveCourse.code
-          if(electiveTypeStr.includes("CHOICE")){
-            electiveTypeStr = ElectiveType.CHOICE
-          }else{
-            electiveTypeStr = ElectiveType.ELEC
-          }
+        // Find the elective type based on elective course code
+        // This could be done in a better way
+        let electiveTypeStr = electiveCourse.code
+        if(electiveTypeStr.includes("CHOICE")){
+          electiveTypeStr = ElectiveType.CHOICE
+        }else{
+          electiveTypeStr = ElectiveType.ELEC
+        }
 
-          // remove all elecive placholer courses from the alternatives
-          const thisCourseAlternative = alternatives.filter(alt => !alt.isElectivePlaceholder);
+        // remove all elecive placholer courses from the alternatives
+        const thisCourseAlternative = alternatives.filter(alt => !alt.isElectivePlaceholder);
 
-          // add the elective course to the alternatives so that there is only on elective placholder in the alternatives
-          thisCourseAlternative.push(electiveCourse);
+        // add the elective course to the alternatives so that there is only on elective placholder in the alternatives
+        thisCourseAlternative.push(electiveCourse);
+        
+        let elecCredits = 0;
+
+        while(elecCredits < credits){
           
-          let elecCredits = 0;
+          const term = getRandomTerm(requirement, electiveCourse);
 
-          while(elecCredits < credits){
-           
-            const term = getRandomTerm(requirement, electiveCourse);
-  
-            await prisma.plannedCourse.create({
-              data: {
-                term,
-                electiveType: electiveTypeStr as ElectiveType,
-                isElective: true,
-                course: {
-                  connect: {
-                    id: electiveCourse.id,
-                  },
+          await prisma.plannedCourse.create({
+            data: {
+              term,
+              electiveType: electiveTypeStr as ElectiveType,
+              isElective: true,
+              course: {
+                connect: {
+                  id: electiveCourse.id,
                 },
-                coursePlan: {
-                  connect: {
-                    id: coursePlan.id,
-                  },
-                },
-                alternativeCourses: {
-                  connect: thisCourseAlternative.map(alt => ({ id: alt.id }))
-                }
               },
-            });
-            elecCredits += electiveCourse.credits || 0;
-          }
+              coursePlan: {
+                connect: {
+                  id: coursePlan.id,
+                },
+              },
+              alternativeCourses: {
+                connect: thisCourseAlternative.map(alt => ({ id: alt.id }))
+              }
+            },
+          });
+          elecCredits += electiveCourse.credits || 0;
         }
       }
     }
+  }
+
+  if(minor){
+    // TODO: Implement minor requirements
+    // Minor requirements need to be alternatives for the majors electives
+
+
+    // const minorRequirements = (minor as Specialization & { requirements: Requirement[] }).requirements;
+
+    // for (const requirement of minorRequirements){
+    //   const credits = requirement.credits;
+    //   const alternatives = (requirement as Requirement & { alternatives: Course[] }).alternatives;
+    //   const electiveCourse = (requirement as Requirement & { electiveCourse: Course }).electiveCourse;
+
+
+    // }
   }
 }
 
@@ -275,7 +294,12 @@ export async function getAlternatives(plannedCourseId: string, searchTerm: strin
       alternativeCourses: true,
     },
   });
-  return plannedCourse?.alternativeCourses.filter(alt => !alt.isElectivePlaceholder && (alt.code.includes(searchTerm) || alt.name.includes(searchTerm)));
+  return plannedCourse?.alternativeCourses.filter(
+    alt => !alt.isElectivePlaceholder && (
+      alt.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      alt.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
 }
 
 export async function getElectivePlaceholder(plannedCourseId: string) {

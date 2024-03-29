@@ -10,7 +10,7 @@ export default function CoursePlanInfoPanel(props:{
     const { coursePlan, updateCoursePlan } = props;
     const currentTitle = coursePlan?.title;
 
-    const majorSpecialization = coursePlan?.degree?.specializations?.find(specialization => specialization.specializationType === SpecializationType.MAJOR);
+    const majorSpecialization = coursePlan?.degree?.specializations?.find(specialization => specialization.specializationType === SpecializationType.MAJOR || specialization.specializationType === SpecializationType.HONOURS);
     const minorSpecialization = coursePlan?.degree?.specializations?.find(specialization => specialization.specializationType === SpecializationType.MINOR);
 
     const totalCredits = coursePlan?.plannedCourses?.reduce((acc, plannedCourse) => acc + plannedCourse?.course?.credits, 0);
