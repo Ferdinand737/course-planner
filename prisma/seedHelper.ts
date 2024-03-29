@@ -1,7 +1,6 @@
 import { Course, Faculty, RequirementType } from "~/interfaces";
 import { prisma } from "~/db.server";
 import { Prisma } from "@prisma/client";
-import { al } from "vitest/dist/reporters-5f784f42";
 
 export class HelperCourse{
     code: string;
@@ -25,17 +24,9 @@ export class HelperCourse{
 
 
     constructor(row:any){
-        this.code = row["course_code"]
-        this.name = row["name"].replace(this.code, "").trim()
-        this.description = row["description"]
-        this.credits = Number(row["credits"])
-        this.isHonours = row["is_honours"] === "True" ? true : false
-        this.durationTerms = Number(row["duration_terms"])
-        this.winterTerm1 = row["winter_term_1"] === "True" ? true : false
-        this.winterTerm2 = row["winter_term_2"] === "True" ? true : false
-        this.summerTerm1 = row["summer_term_1"] === "True" ? true : false
-        this.summerTerm2 = row["summer_term_2"] === "True" ? true : false
-
+        // These lists need to be updated for accuracy
+        // We need a third list called 'OTHER' for courses that are not in either of these lists
+        // Some of the items in arts belong in 'OTHER'
         const science = [
             "APSC",
             "ASTR",
@@ -108,6 +99,19 @@ export class HelperCourse{
             "WRLD",
         ]
 
+        // The code below parses the contents of courses.csv
+        this.code = row["course_code"]
+        this.name = row["name"].replace(this.code, "").trim()
+        this.description = row["description"]
+        this.credits = Number(row["credits"])
+        this.isHonours = row["is_honours"] === "True" ? true : false
+        this.durationTerms = Number(row["duration_terms"])
+        this.winterTerm1 = row["winter_term_1"] === "True" ? true : false
+        this.winterTerm2 = row["winter_term_2"] === "True" ? true : false
+        this.summerTerm1 = row["summer_term_1"] === "True" ? true : false
+        this.summerTerm2 = row["summer_term_2"] === "True" ? true : false
+
+
         const foundFaculty = row["course_code"].split(" ")[0]
 
         this.faculty = science.includes(foundFaculty) ? Faculty.SCI : arts.includes(foundFaculty) ? Faculty.ART : Faculty.OTHER
@@ -150,32 +154,57 @@ export class HelperRequirement{
         this.electiveCourse = null
     }
 
+    // This function read the alternative string and populates the alternatives and electiveCourse fields
     async populateAlternatives() {
+        // this.alternativeString is the 'Alternatives' column in the csv
+
+
         let alternativeCourses:Course[] = [];
+
     
-        if (!this.alternativeString.includes("ELEC")) {
+        if (!this.alternativeString.includes("ELEC")) {// Indicates either a single course or a list of courses. eg: "PHYS111;PHYS112"
+
             const alternatives = this.alternativeString.split(";");
             for (const alternative of alternatives) {
+
+                // Add a space to alternative course because that is how they are saved in the database
                 const courseCodeWithSpace = alternative.replace(/([A-Za-z])(\d)/g, '$1 $2');
+
+                // Find the course in the database based on the course code
                 const course = await prisma.course.findUnique({
                     where: { code: courseCodeWithSpace }
                 });
+
                 if (course) {
+                    // If the course is found, add it to the list of alternative courses
                     alternativeCourses.push(course);
                 }
             }
+            // alternativeCourses will be the list of courses in he 'Alternatives' column in the csv file seperated by ;
             this.alternatives = alternativeCourses;
-            this.electiveCourse = await prisma.course.findUnique({
-                where: { code: "CHOICE" }
-            })
+
+            // Only happens when there is more than one option in the alternatives
+            if (this.alternatives.length > 1){
+                // This finds the special elective placeholder course
+                this.electiveCourse = await prisma.course.findUnique({
+                    where: { code: "CHOICE" }
+                })
+            }
+
         } else {
+            // Finds the special placholder course that matches the elective type eg: 'ELEC_UL_COSC'
             this.electiveCourse = await prisma.course.findUnique({
                 where: { code: this.alternativeString.trim() }
             })
+            // this converts the string into an array of queries eg: ['UL', 'COSC']
             const queries = this.alternativeString.split("_").filter(q => q !== "" && q !== "ELEC").map(q => q.trim());
+
+            // This gets all the courses in the database 
             let alternativeCourses = await prisma.course.findMany();
             for (const q of queries) {
                 let queryResults:Course[] = [];
+
+                // Run a query based on the query string
                 if (q === "UL") {
                     queryResults = await this.findUpperLevelCourses();
                 } else if (q === "SCI") {
@@ -189,7 +218,8 @@ export class HelperRequirement{
                 } else {
                     console.log("Unknown query:" + q);
                 }
-    
+                
+                // Only add the courses to the alternatives that are in the query results
                 alternativeCourses = alternativeCourses.filter(course => {
                     return queryResults.some(queryCourse => {
                         return queryCourse.code === course.code;

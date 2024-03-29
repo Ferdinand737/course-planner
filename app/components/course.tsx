@@ -30,7 +30,7 @@ export default function CourseComponent(props: {
         return Number(coursePlan?.plannedCourses?.find((plannedCourse) => plannedCourse.course?.code === courseCode)?.term);
     }
 
-
+    // This function recursively checks if the pre-requisites for a course are met
     function checkPreRequisites(node: { type: string; subtype: string; value: any; childNodes: any[]; } | any) {
 
         let failedConditions: string[] = []; 

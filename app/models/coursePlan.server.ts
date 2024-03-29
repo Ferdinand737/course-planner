@@ -119,7 +119,8 @@ export async function setCoursePlan(coursePlanData: any) {
 }
 
 export async function createCoursePlan(planName: string, specializations: Specialization[], userId: string) {
-  
+
+  // Create a new degree with desired major/minor combination
   const degree = await prisma.degree.create({
     data: {
       degreeType: DegreeType.BSc,
@@ -129,10 +130,11 @@ export async function createCoursePlan(planName: string, specializations: Specia
     },
   });
 
+  // Create a new course plan with the desired degree
   const coursePlan = await prisma.coursePlan.create({
     data: {
       title: planName,
-      numTerms: 16,
+      numTerms: 16,// Default to 4 years
       user: {
         connect: {
           id: userId,
@@ -156,32 +158,21 @@ export async function createCoursePlan(planName: string, specializations: Specia
       const electiveCourse = (requirement as Requirement & { electiveCourse: Course }).electiveCourse;
 
       if (alternatives.length > 0) {
+
+        // Find the total credits in the alternatives, this number could be very large if this requirement is a general 'ELEC'
         let creditsInAlternatives = alternatives.reduce((accumulator, alternative) => accumulator + alternative.credits, 0);
 
+        /* The below if staments only executes when all courses in the 'Alternatives' column are required. 
+          For example in 'BSc-MATH-Major.csv': 'Alternatives'=MATH100;MATH101 and credits=6
+          So all courses in the alternatives are required to be taken to satisfy the requirement
+        */
         if (creditsInAlternatives == credits){
 
           for (const alternative of alternatives) {
-            let year = requirement.year;
+ 
+            const term = getRandomTerm(requirement, alternative);
 
-            if(requirement.year < 0){
-              year = Math.floor(Math.random() * (4 - 2 + 1)) + 2;
-            }
-
-            const baseTermNumber = (year - 1) * 4;
-            let term;
-            
-            if (alternative.winterTerm1) {
-              term = baseTermNumber + 1;
-            } else if (alternative.winterTerm2) {
-              term = baseTermNumber + 2;
-            } else if (alternative.summerTerm1) {
-              term = baseTermNumber + 3;
-            } else if (alternative.summerTerm2) {
-              term = baseTermNumber + 4;
-            } else {
-              term = baseTermNumber + 1;
-            }
-
+            // Create the planned course in the database
             await prisma.plannedCourse.create({
               data: {
                 term,
@@ -195,14 +186,13 @@ export async function createCoursePlan(planName: string, specializations: Specia
                     id: coursePlan.id,
                   },
                 },
-                alternativeCourses: {
-                  connect: alternatives.map(alt => ({ id: alt.id }))
-                }
               },
             });
           }
         }else if(electiveCourse){
 
+          // Find the elective type based on elective course code
+          // This could be done in a better way
           let electiveTypeStr = electiveCourse.code
           if(electiveTypeStr.includes("CHOICE")){
             electiveTypeStr = ElectiveType.CHOICE
@@ -210,16 +200,17 @@ export async function createCoursePlan(planName: string, specializations: Specia
             electiveTypeStr = ElectiveType.ELEC
           }
 
+          // remove all elecive placholer courses from the alternatives
           const thisCourseAlternative = alternatives.filter(alt => !alt.isElectivePlaceholder);
+
+          // add the elective course to the alternatives so that there is only on elective placholder in the alternatives
           thisCourseAlternative.push(electiveCourse);
           
           let elecCredits = 0;
 
           while(elecCredits < credits){
-            let year = requirement.year < 0 ? Math.floor(Math.random() * (3)) + 2 : requirement.year;
-            const baseTermNumber = (year - 1) * 4;
-            let term = baseTermNumber + 1; 
-            
+           
+            const term = getRandomTerm(requirement, electiveCourse);
   
             await prisma.plannedCourse.create({
               data: {
@@ -247,6 +238,34 @@ export async function createCoursePlan(planName: string, specializations: Specia
       }
     }
   }
+}
+
+function getRandomTerm(requirement:Requirement, alternative:Course){
+  // if year is negative, choose a random year between 2 and 4
+  let year = requirement.year < 0 ? Math.floor(Math.random() * (3)) + 2 : requirement.year;
+  const baseTermNumber = (year - 1) * 4;
+            
+  let availableTerms = [];
+  if (alternative.winterTerm1) {
+    availableTerms.push(baseTermNumber + 1);
+  } 
+  if (alternative.winterTerm2) {
+    availableTerms.push(baseTermNumber + 2);
+  }
+  if (alternative.summerTerm1) {
+    availableTerms.push(baseTermNumber + 3);
+  }
+  if (alternative.summerTerm2) {
+    availableTerms.push(baseTermNumber + 4);
+  }
+  
+  // If no terms were selected, default to the first term
+  if (availableTerms.length === 0) {
+    availableTerms.push(baseTermNumber + 1);
+  }
+  
+  // choose a random term from the available terms
+  return availableTerms[Math.floor(Math.random() * availableTerms.length)];
 }
 
 export async function getAlternatives(plannedCourseId: string, searchTerm: string) {

@@ -67,14 +67,20 @@ enum RequirementType {
 model Requirement {
   id              String          @id @default(cuid())
   constraintType  RequirementType @default(AT_LEAST)
+
+  // Credits is used to find how many courses in the alternatives are needed to satisfy the requirement
+  // For example if alternatives is [MATH101, MATH103, MATH123] each with 3 credits and credits is 6, then 2 courses are needed
   credits         Int
+  // Alternatives represent a list of courses that can be taken to satisfy the requirement
+  alternatives Course[] @relation("CourseRequirements")
+
   year            Int
   programSpecific Boolean         @default(false)
 
+  // This is the special elective course that represnts a choice of courses eg:ELEC_UL_COSC or CHOICE
+  // This field is only populated when a requirement has more than 1 course in the Alternatives coloumn
   electiveCourse   Course? @relation(fields: [electiveCourseId], references: [id])
   electiveCourseId String?
-
-  alternatives Course[] @relation("CourseRequirements")
 
   specialization   Specialization? @relation(fields: [specializationId], references: [id])
   specializationId String?
@@ -101,6 +107,8 @@ enum ElectiveType {
   CHOICE
 }
 model PlannedCourse {
+  // PlannedCourse represents a course that has been added to a course plan
+
   id   String @id @default(cuid())
   term Int
 
@@ -110,6 +118,8 @@ model PlannedCourse {
   course   Course @relation(fields: [courseId], references: [id])
   courseId String
 
+
+  // alternativeCourses only populated if this planned course represents an elective
   alternativeCourses Course[] @relation("PlannedCourseAlternatives")
 
   coursePlan   CoursePlan @relation(fields: [coursePlanId], references: [id])
@@ -127,7 +137,10 @@ model Course {
   code        String  @unique
   name        String
   description String? @db.LongText
-  isElectivePlaceholder  Boolean @default(false)// Special type of placeholder course
+
+  // There are special courses that are used as placeholders, these courses can be found in /data-aquisition/data/electiveTypes.csv
+  isElectivePlaceholder  Boolean @default(false)
+
   winterTerm1 Boolean @default(false)
   winterTerm2 Boolean @default(false)
   summerTerm1 Boolean @default(false)
@@ -149,7 +162,7 @@ model Course {
 
   coRequisiteCourses Course[] @relation("CoRequisites")
   coRequisiteOf      Course[] @relation("CoRequisites")
-
+  
   excludedCourses Course[] @relation("ExcludedCourses")
   excludedBy      Course[] @relation("ExcludedCourses")
 

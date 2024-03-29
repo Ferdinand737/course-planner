@@ -1,12 +1,7 @@
 import { Button, Input, Popconfirm, message } from "antd";
 import { CheckOutlined, DeleteOutlined } from '@ant-design/icons';
-
-import { useEffect, useState } from "react";
-import { CoursePlan, Specialization, SpecializationType } from "~/interfaces";
-import { Router } from "express";
-
-
-
+import { useState } from "react";
+import { CoursePlan, SpecializationType } from "~/interfaces";
 
 export default function CoursePlanInfoPanel(props:{
     coursePlan: CoursePlan | null,
@@ -44,7 +39,6 @@ export default function CoursePlanInfoPanel(props:{
         }
     }
 
-    
 
     return (
         <div className="flex items-center justify-between">

@@ -7,7 +7,7 @@ import { requireUserId } from "~/session.server";
 
 
 export async function loader({ request }: LoaderFunctionArgs) {
-    const userId = await requireUserId(request);
+    await requireUserId(request);
     const availableMajors = await prisma.specialization.findMany({where: {specializationType: SpecializationType.MAJOR}})
     const availableMinors = await prisma.specialization.findMany({where: {specializationType: SpecializationType.MINOR}})
     return json({ availableMajors, availableMinors});
@@ -42,7 +42,7 @@ export async function action({ request }: ActionFunctionArgs) {
                     },
                 },
             }
-        }) : undefined;
+        }) as Specialization : undefined;
 
         if (!major) {
             errors.major = "Major is required";
@@ -57,18 +57,24 @@ export async function action({ request }: ActionFunctionArgs) {
                     }
                 },
             }
-        }) : undefined;
+        }) as Specialization : undefined;
 
-        if (!minor) {
-            errors.minor = "Minor is required";
-        }
-
+     
         if (Object.values(errors).some(error => error !== undefined)) {
             return json({ errors, message: "Failure" }, { status: 400 });
         }
 
-        if(planName && major && minor) {
-            await createCoursePlan(planName, [major], userId);
+        const specializations: Specialization[] = []
+
+
+        if(planName) {
+            if (major){
+                specializations.push(major);
+            }
+            if (minor){
+                specializations.push(minor);
+            }
+            await createCoursePlan(planName, specializations, userId);
         }
 
         return json({ errors: null, message: "Success" }, { status: 201 });
@@ -118,7 +124,7 @@ export default function NewCoursePlan(){
                     <label htmlFor="minor" className="block text-sm font-medium text-gray-700">Minor:</label>
                     <select id="minor" name="minor" 
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">None</option>
+                        <option value="None">None</option>
                         {minors.map((minor: Specialization) => (
                         <option key={minor.id} value={minor.id}>
                             {minor.name}

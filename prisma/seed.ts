@@ -6,6 +6,10 @@ import path from "path";
 import { HelperCourse, HelperRequirement } from './seedHelper';
 import { prisma } from "~/db.server";
 
+/*
+  The code in this file reads the CSV files in the data-aquisition/data folder and seeds the database with the data.
+*/
+
 
 async function readCoursesCSV(): Promise<HelperCourse[]> {
   const csvPath = path.resolve(__dirname, "../data-aquisition/data/courses.csv");
@@ -13,6 +17,9 @@ async function readCoursesCSV(): Promise<HelperCourse[]> {
     let operations: any[] = []
     let helperCourses: HelperCourse[] = []
     
+    /*
+      Read the CSV file and create a new HelperCourse for each row.
+    */
     fs.createReadStream(csvPath)
       .pipe(csv())
       .on("data", (row) => {
@@ -41,6 +48,7 @@ async function readCoursesCSV(): Promise<HelperCourse[]> {
         operations.push(operation())
       })
       .on("end", () => {
+        // Wait for all the operations to finish before resolving the promise.
         Promise.all(operations).then(() => {
           resolve(helperCourses);
         }).catch(reject);
@@ -81,7 +89,7 @@ async function readSpecializationsCSVs() {
   const fileNames = fs.readdirSync(directoryPath);
 
   for (const fileName of fileNames) {
-
+    // Create a specialization for each file in ../data-aquisition/data/degrees
     const { discipline, specializationType } = parseSpecializationFromFileName(fileName);
     const specialization = await prisma.specialization.create({
       data: {
@@ -105,6 +113,7 @@ async function readSpecializationsCSVs() {
     });
   
     for (const row of rows) {
+      // Each row in each degree file is a requirement for a specialization
       const helperRequirement = new HelperRequirement(row);
       await helperRequirement.populateAlternatives();
       await prisma.requirement.create({
@@ -126,7 +135,7 @@ async function readSpecializationsCSVs() {
 
 async function readElectiveTypesCSV() {
   const csvPath = path.resolve(__dirname, "../data-aquisition/data/electiveTypes.csv");
-
+  // populate the database with special placeholder courses for electives
   fs.createReadStream(csvPath)
       .pipe(csv())
       .on("data", async (row) => {
