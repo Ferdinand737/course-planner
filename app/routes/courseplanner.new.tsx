@@ -52,10 +52,7 @@ export async function action({ request }: ActionFunctionArgs) {
             }
         }) as Specialization : undefined;
 
-        if (!major) {
-            errors.major = "Major is required";
-        }
-
+        
         const minor = minorId ? await prisma.specialization.findUnique({
             where: {id: minorId},
             include: {
@@ -66,17 +63,18 @@ export async function action({ request }: ActionFunctionArgs) {
                 },
             }
         }) as Specialization : undefined;
-
-     
-        if (Object.values(errors).some(error => error !== undefined)) {
-            return json({ errors, message: "Failure" }, { status: 400 });
-        }
-
+        
         if(planName) {
             if (major){
                 await createCoursePlan(planName, major, minor, userId);
+            }else{
+                errors.major = "Major is required";
             }
         }
+
+        if (Object.values(errors).some(error => error !== undefined)) {
+            return json({ errors, message: "Failure" }, { status: 400 });
+    }
 
         return json({ errors: null, message: "Success" }, { status: 201 });
     } catch (error) {

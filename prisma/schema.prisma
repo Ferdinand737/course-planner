@@ -27,6 +27,15 @@ model Password {
   userId String @unique
 }
 
+model IngestedFile {
+  id String @id @default(cuid())
+
+  createdAt DateTime @default(now())
+  filePath String
+  name String
+  ingested Boolean @default(false)
+}
+
 enum DegreeType {
   BSc
   BA
@@ -134,6 +143,7 @@ enum Faculty {
 
 model Course {
   id          String  @id @default(cuid())
+  year        Int // Indicates the most recent version of the course that has been ingested
   code        String  @unique
   name        String
   description String? @db.LongText

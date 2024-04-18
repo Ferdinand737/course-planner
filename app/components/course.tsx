@@ -219,7 +219,7 @@ export default function CourseComponent(props: {
                                             transform: 'translate(50%, 50%)'
                                         }}
                                         onClick={async () => {
-                                            const response = await fetch(`/coursePlanAPI/${coursePlan?.id}?plannedCourseId=${thisPlannedCourse.id}&resetElective=true`);
+                                            const response = await fetch(`/plannedCourseAPI/${thisPlannedCourse.id}?resetElective=true`);
                                             const data = await response.json();
                                             updateElectiveCourse(thisPlannedCourse, data.electiveCourse)
                                         }}

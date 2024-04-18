@@ -24,6 +24,7 @@ export default function CoursePlanInfoPanel(props:{
             title
         }
         updateCoursePlan(newCoursePlan);
+        window.location.href = `/courseplanner/${coursePlan?.id}`;
     }
 
 

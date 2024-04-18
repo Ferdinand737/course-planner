@@ -3,6 +3,7 @@ import { prisma } from "~/db.server";
 import { Prisma } from "@prisma/client";
 
 export class HelperCourse{
+    year: number;
     code: string;
     name: string;
     description: string;
@@ -100,16 +101,17 @@ export class HelperCourse{
         ]
 
         // The code below parses the contents of courses.csv
+        this.year = Number(row["year"])
         this.code = row["course_code"]
         this.name = row["name"].replace(this.code, "").trim()
         this.description = row["description"]
         this.credits = Number(row["credits"])
         this.isHonours = row["is_honours"] === "True" ? true : false
         this.durationTerms = Number(row["duration_terms"])
-        this.winterTerm1 = row["winter_term_1"] === "True" ? true : false
-        this.winterTerm2 = row["winter_term_2"] === "True" ? true : false
-        this.summerTerm1 = row["summer_term_1"] === "True" ? true : false
-        this.summerTerm2 = row["summer_term_2"] === "True" ? true : false
+        this.winterTerm1 = row["winter_term_1"].toLowerCase() === "true" ? true : false
+        this.winterTerm2 = row["winter_term_2"].toLowerCase() === "true" ? true : false
+        this.summerTerm1 = row["summer_term_1"].toLowerCase() === "true" ? true : false
+        this.summerTerm2 = row["summer_term_2"].toLowerCase() === "true" ? true : false
 
 
         const foundFaculty = row["course_code"].split(" ")[0]
@@ -131,6 +133,7 @@ export class HelperCourse{
         }
     }
 }
+
 
 export class HelperRequirement{
     constraintType: RequirementType

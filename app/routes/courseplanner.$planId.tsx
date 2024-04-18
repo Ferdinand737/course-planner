@@ -8,9 +8,11 @@ import { Button, message } from "antd";
 import { PlusOutlined } from '@ant-design/icons';
 import TermComponent from "~/components/term";
 import CoursePlanInfoPanel from "~/components/coursePlanInfoPanel";
+import { getCoursePlan } from "~/models/coursePlan.server";
+import { LoaderFunctionArgs, json } from "@remix-run/node";
 
 
-export async function clientLoader({params}: {params: any}) {
+export async function clientLoader({ params, request }: LoaderFunctionArgs) {
     // This is just here to force client side rendering and get the planId
     return params.planId;
 };

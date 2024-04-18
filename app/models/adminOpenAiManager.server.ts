@@ -1,16 +1,19 @@
-const { OpenAI } = require("openai");
-require('dotenv').config({path:'../.env'});
+import OpenAI from "openai";
 
-class OpenAIRequester {
+export default class OpenAIRequester {
 
-    constructor() {
+    openai;
+    numRequests: number;
+
+    constructor(key: string, numRequests: number) {
         this.openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-            organization:"org-XRu80OJxG7Dc5Pb73vTkTyRf"
+            apiKey: key,
         });
+        this.numRequests = numRequests;
+        console.log('Num requests: ', numRequests)
     }
     
-    async sendRequestToOpenAI(setup, prompt)  {
+    async sendRequestToOpenAI(setup:string, prompt:string)  {
         const completion = await this.openai.chat.completions.create({
             messages: [
                 { role: "system", content: setup },
@@ -23,43 +26,47 @@ class OpenAIRequester {
         return completion.choices[0].message.content ?? "";
     }
     
-    async manageRequest(setup, prompt, maxAttempts = 100) {
+    async manageRequest(setup: string, prompt: string, maxAttempts = 10) {
         let attempt = 0;
-        let delay = 100000 + Math.random() * 100000; // Increased initial range
-        const minBackoffFactor = 2.5; // Minimum backoff factor
-        const maxBackoffFactor = 3.5; // Maximum backoff factor
-        const maxDelay = 6000000; // Max delay in milliseconds
+
+        let baseDelay = 1000;  // miliseconds per request
+        let currentDelay = baseDelay; // Start with base delay
+        const maxDelay = (this.numRequests ? this.numRequests : 1) * baseDelay; // Max delay = numRequests *  baseDelay
         
+        let jitter = maxDelay * Math.random() * 0.05;
+        const delay = (Math.random() * maxDelay) + jitter; // choose random number between 0 and max delay then add jitter
+
+
         while (attempt < maxAttempts) {
             try {
                 const response = await this.sendRequestToOpenAI(setup, prompt);
+                this.numRequests--;
+                console.log(`Attempt ${attempt + 1} succeeded, remaining requests: ${this.numRequests}`);
                 return response; // Success, return the response
             } catch (error) {
-                console.error(`Attempt ${attempt + 1} failed`);
-                if (attempt >= maxAttempts - 1) throw new Error("Maximum attempts reached, giving up.");
-                
-                // Proportional jitter: 10% to 20% of the current delay
-                const jitter = delay * (0.1 + Math.random() * 0.1);
-                const randomizedDelay = delay + jitter;
+                if (error.code === 'rate_limit_exceeded') {
+                    if (attempt >= maxAttempts - 1) throw new Error("Maximum attempts reached, giving up.");
+                    let moreJitter = maxDelay * Math.random() * 0.1;
 
-                console.log("Current delay:", randomizedDelay);
-                await this.wait(randomizedDelay);
-                
-                const backoffFactor = minBackoffFactor + (Math.random() * (maxBackoffFactor - minBackoffFactor));
-                
-                delay = Math.min(delay * backoffFactor, maxDelay);
-                attempt++;
+                    currentDelay = Math.min((currentDelay * 2**(2 * attempt)) + moreJitter, maxDelay + moreJitter);
+                    console.log(`Current Delay: ${currentDelay/1000/60}min`);
+                    await this.wait(currentDelay); // Exponential backoff
+                    
+                    attempt++;
+                } else {
+                    throw error; // For other errors, don't retry and propagate the error
+                }
             }
         }
-        return "";
+        return "";  // If all attempts fail, return an empty response or consider throwing an error
     }
     
-
-    wait(duration) {
-        return new Promise(resolve => setTimeout(resolve, duration));
+    // Helper function 'wait' that returns a promise that resolves after the specified delay
+    wait(delay: number) {
+        return new Promise(resolve => setTimeout(resolve, delay));
     }
 
-    async getPreRequisiteJson(pre_req_str){
+    async getPreRequisiteJson(pre_req_str: string){
         const interfaceToString = `
         interface PrerequisiteNode {
             type: string;
@@ -323,4 +330,3 @@ class OpenAIRequester {
         }
     }
 }
-module.exports = OpenAIRequester;

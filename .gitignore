@@ -12,3 +12,5 @@ venv/
 .vscode/
 
 nvm-node.sh
+
+uploaded-files/

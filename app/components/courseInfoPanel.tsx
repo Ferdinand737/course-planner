@@ -16,7 +16,7 @@ export default function CourseInfoPanel(props: {
 
     useEffect(() => {
         async function fetchAlternatives() {
-            const response = await fetch(`/coursePlanAPI/${planId}?plannedCourseId=${plannedCourse.id}&alternativeSearch=${searchTerm}`);
+            const response = await fetch(`/plannedCourseAPI/${plannedCourse.id}?alternativeSearch=${searchTerm}`);
             const data = await response.json();
             setAlternatives(data.alternativeData);
         }

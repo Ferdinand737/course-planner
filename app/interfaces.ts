@@ -12,6 +12,7 @@ import {
     Requirement as PrismaRequirement,
     User as PrismaUser,
     Password as PrismaPassword,
+    IngestedFile as PrismaIngestedFile,
     Prisma,
   } from '@prisma/client';
 
@@ -20,6 +21,7 @@ export { PrismaDegreeType as DegreeType };
 export { PrismaSpecializationType as SpecializationType };
 export { PrismaRequirementType as RequirementType };
 export { PrismaFaculty as Faculty };
+export type { PrismaIngestedFile as IngestedFile };
   
 export interface Course extends PrismaCourse {
     plannedCourses?: PlannedCourse[];

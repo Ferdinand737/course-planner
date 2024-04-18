@@ -65,7 +65,15 @@ export default function App() {
                 >
                   Course Planner
                 </Link>
-              </div>
+                {user && user.isAdmin? (
+                  <Link
+                    to="/admin"
+                    className="block mt-4 lg:inline-block lg:mt-0 text-teal-200 hover:text-white mr-4"
+                  >
+                    Admin Panel
+                  </Link>
+                ) : null}
+              </div> 
               <div>
                 {user ? (
                   <form action="/logout" method="POST">

@@ -3,6 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException  
 import time
 import pandas as pd
+import datetime
 
 approx_num_courses = {"UBC, UBCO": 9657, "UBCO": 1773, "UBC": 7884}
 
@@ -35,7 +36,8 @@ def save(df):
         'pre_req_json': 'first'
     }).reset_index()
 
-    df.to_csv("data/courses.csv")
+    current_date = datetime.date.today().strftime("%Y-%m-%d")
+    df.to_csv(f"data/courses_{current_date}.csv")
 
 
 def scrape_classes():
