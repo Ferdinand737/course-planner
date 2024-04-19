@@ -227,7 +227,7 @@ def scrape_classes():
                                                summerTerm1, 
                                                summerTerm2, 
                                                durationTerms,
-                                               "\{\}"#placeholder
+                                               ""#placeholder for pre_req_json
                                                ]
 
                         print(f"Progress: {round((i/approx_num_courses[chosen_campus])*100, 2)}%", end='\r')

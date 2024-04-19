@@ -25,14 +25,12 @@ export type { PrismaIngestedFile as IngestedFile };
   
 export interface Course extends PrismaCourse {
     plannedCourses?: PlannedCourse[];
-    alternativeCourses?: PlannedCourse[];
     equivalentCourses?: Course[];
     equivalentTo?: Course[];
     coRequisiteCourses?: Course[];
     coRequisiteOf?: Course[];
     excludedCourses?: Course[];
     excludedBy?: Course[];
-    requirements?: Requirement[];
     preRequisites:{ type: string; subtype: string; value: any; childNodes: any[]; } | null | Prisma.JsonValue;
 }
   
@@ -44,7 +42,7 @@ export interface CoursePlan extends PrismaCoursePlan {
 
 export interface PlannedCourse extends PrismaPlannedCourse {
     course?: Course | null;
-    alternativeCourses?: Course[] | null;
+    requirement?: Requirement | null;
     coursePlan?: CoursePlan | null;
 }
 
@@ -60,8 +58,8 @@ export interface Specialization extends PrismaSpecialization {
 
 export interface Requirement extends PrismaRequirement {
     electiveCourse?: Course | null;
-    alternatives?: Course[] | null;
     specialization?: Specialization| null;
+    plannedCourses?: PlannedCourse[] | null;
 }
 
 export interface User extends PrismaUser {

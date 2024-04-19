@@ -3,9 +3,8 @@ import fs from "fs";
 import csv from "csv-parser";
 import Papa from 'papaparse';
 import { prisma } from "~/db.server";
-import { HelperCourse, HelperRequirement } from "./adminHelper.server";
+import { HelperCourse } from "./adminHelper.server";
 import OpenAIRequester from "./adminOpenAiManager.server";
-import { SpecializationType } from "~/interfaces";
 
 export async function getIngestedFiles(){
   const allCourses = await prisma.course.findMany();
@@ -122,7 +121,11 @@ export async function ingest(apiKey: string){
 
       for (const helperCourse of helperCoursesToProcess) {
         if (helperCourse) {
-          helperCourse.pre_req_json = await openAIRequester.getPreRequisiteJson(helperCourse.pre_req_str);
+
+          if (!helperCourse.pre_req_json){
+            helperCourse.pre_req_json = await openAIRequester.getPreRequisiteJson(helperCourse.pre_req_str);
+          }
+
 
           const course = allCourses.find(c => c.code === helperCourse.code);
           if (!course || helperCourse.year > course.year){
@@ -197,113 +200,9 @@ export async function ingest(apiKey: string){
         }
       })
     }
-    
-    await readSpecializationsCSVs();  
 }
 
-function parseSpecializationFromFileName(fileName: string) {
-  const parts = fileName.split('-');
-  const discipline = parts[1];
-  let rawType = parts[2].split('.')[0].toUpperCase();
 
-  let specializationType: SpecializationType = SpecializationType.MAJOR;
-
-  if (rawType === "MINOR"){
-    specializationType = SpecializationType.MINOR;
-  }
-
-  if (rawType === "HONOURS"){
-    specializationType = SpecializationType.HONOURS;
-  }
-  
-
-  return { discipline, specializationType };
-}
-
-async function readSpecializationsCSVs() {
-
-  const mappings = {
-    "COSC": "Computer Science",
-    "ANTH": "Anthropology",
-    "BIOL": "Biology",
-    "CHEM": "Chemistry",
-    "DATA": "Data Science",
-    "ECON": "Economics",
-    "EESC": "Earth and Environmental Science",
-    "GEOG": "Geography",
-    "GISC": "Geographic Information Science",
-    "MATH": "Mathematics",
-    "PHYS": "Physics",
-    "PSYO": "Psychology",
-    "STAT": "Statistics",
-  }
-
-  const directoryPath = path.resolve(__dirname, "../data/degrees");
-  const fileNames = fs.readdirSync(directoryPath);
-
-  for (const fileName of fileNames) {
-
-    // Create a specialization for each file in ../data/degrees
-    const { discipline, specializationType } = parseSpecializationFromFileName(fileName);
-
-    const hons = specializationType === SpecializationType.HONOURS ? " (Honours)" : "";
-
-    const name = mappings[discipline as keyof typeof mappings] + hons
-
-    let specialization = await prisma.specialization.findFirst({
-      where: {
-        name: {equals: name},
-        specializationType: {equals: specializationType},
-        discipline: {equals: discipline}
-      }
-    });
-
-    if (!specialization){
-      specialization = await prisma.specialization.create({
-        data: {
-          name: name,
-          discipline,
-          specializationType,
-        },
-      });
-    }
-
-    const rows:any = [];
-    await new Promise<void>((resolve) => {
-      fs.createReadStream(`${directoryPath}/${fileName}`)
-        .pipe(csv())
-        .on('data', (row) => {
-          rows.push(row);
-        })
-        .on('end', () => {
-          console.log(`Finished reading ${fileName}`);
-          resolve();
-        });
-    });
-
-    await prisma.requirement.deleteMany({where: {specializationId: specialization.id}});
-  
-    for (const row of rows) {
-      // Each row in each degree file is a requirement for a specialization
-      const helperRequirement = new HelperRequirement(row);
-      await helperRequirement.populateAlternatives();
-
-      await prisma.requirement.create({
-        data: {
-          constraintType: helperRequirement.constraintType,
-          credits: helperRequirement.credits,
-          year: helperRequirement.year,
-          programSpecific: helperRequirement.programSpecific,
-          electiveCourseId: helperRequirement.electiveCourse?.id,
-          specializationId:specialization.id ,
-          alternatives: {
-            connect: helperRequirement.alternatives.map(course => ({ id: course.id })),
-          },
-        },
-      });
-    }
-  }
-}
 
 async function readCoursesCSV(csvPath: string): Promise<HelperCourse[]> {
   return new Promise((resolve, reject) => {
@@ -390,7 +289,7 @@ async function processCsv(filePath: string, delimiter: string) {
             const summer_term_1 = true
             const summer_term_2 = true
             const duration_terms = 1
-            const pre_req_json = '{}'
+            const pre_req_json = ''
 
             
             return {

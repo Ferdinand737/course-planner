@@ -43,12 +43,7 @@ export async function action({ request }: ActionFunctionArgs) {
         const major = majorId ? await prisma.specialization.findUnique({
             where: {id: majorId},
             include: {
-                requirements: {
-                    include: {
-                        alternatives: true,
-                        electiveCourse: true,  
-                    },
-                },
+                requirements: true
             }
         }) as Specialization : undefined;
 
@@ -56,11 +51,7 @@ export async function action({ request }: ActionFunctionArgs) {
         const minor = minorId ? await prisma.specialization.findUnique({
             where: {id: minorId},
             include: {
-                requirements: {
-                    include: {
-                        alternatives: true,
-                    }
-                },
+                requirements: true
             }
         }) as Specialization : undefined;
         

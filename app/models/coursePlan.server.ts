@@ -1,6 +1,7 @@
 
 import { DegreeType, ElectiveType, Requirement, Specialization, Course, PlannedCourse } from "../interfaces";
 import { prisma } from "~/db.server";
+import { getAlternativesForRequirement, getCourseByCode } from "./course.server";
 
 export async function getUserCoursePlans(userId: string) {
   return await prisma.coursePlan.findMany({where: {userId}, orderBy: {createdAt: "desc"}});
@@ -37,9 +38,7 @@ export async function setCoursePlan(coursePlanData: any) {
       where: { coursePlanId: id },
       include: {
         course: true,
-        alternativeCourses: true,
       },
-
     });
 
     const existingPlannedCoursesMap = new Map(existingPlannedCourses.map(pc => [pc.id, pc]));
@@ -54,9 +53,6 @@ export async function setCoursePlan(coursePlanData: any) {
           course: {
             connect: { id: pc.course?.id}
           },
-          alternativeCourses:{
-            connect: pc.alternativeCourses?.map((alt: Course) => ({id: alt.id}))
-          }
         },
       }));
     
@@ -158,7 +154,7 @@ export async function createCoursePlan(planName: string, major: Specialization, 
 
   for (const requirement of requirements) {
     const credits = requirement.credits;
-    const alternatives = (requirement as Requirement & { alternatives: Course[] }).alternatives;
+    const alternatives = await getAlternativesForRequirement(requirement.alternativeQuery);
     const electiveCourse = (requirement as Requirement & { electiveCourse: Course }).electiveCourse;
 
     if (alternatives.length > 0) {
@@ -190,133 +186,134 @@ export async function createCoursePlan(planName: string, major: Specialization, 
                   id: coursePlan.id,
                 },
               },
+              requirement: {
+                connect: {
+                  id: requirement.id,
+                },
+              },
             },
           });
         }
-      }else if(electiveCourse){
+      }else{
 
-        // Find the elective type based on elective course code
-        // This could be done in a better way
-        let electiveTypeStr = electiveCourse.code
-        if(electiveTypeStr.includes("CHOICE")){
-          electiveTypeStr = ElectiveType.CHOICE
-        }else{
-          electiveTypeStr = ElectiveType.ELEC
+        let electiveCourse = await getCourseByCode(requirement.alternativeQuery);
+        let electiveTypeStr = ElectiveType.ELEC.valueOf();
+        if(!electiveCourse){
+          electiveCourse = await getCourseByCode("CHOICE")
+          electiveTypeStr = ElectiveType.CHOICE.valueOf();
         }
 
-        // remove all elecive placholer courses from the alternatives
-        const thisCourseAlternative = alternatives.filter(alt => !alt.isElectivePlaceholder);
-
-        // add the elective course to the alternatives so that there is only on elective placholder in the alternatives
-        thisCourseAlternative.push(electiveCourse);
-        
-        let elecCredits = 0;
-
-        while(elecCredits < credits){
-          
-          const term = getRandomTerm(requirement, electiveCourse);
-
-          await prisma.plannedCourse.create({
-            data: {
-              term,
-              electiveType: electiveTypeStr as ElectiveType,
-              isElective: true,
-              course: {
-                connect: {
-                  id: electiveCourse.id,
-                },
-              },
-              coursePlan: {
-                connect: {
-                  id: coursePlan.id,
-                },
-              },
-              alternativeCourses: {
-                connect: thisCourseAlternative.map(alt => ({ id: alt.id }))
-              }
-            },
-          });
-          elecCredits += electiveCourse.credits || 0;
-        }
-      }
-    }
-  }
-
-  if(minor){
-    // TODO: Implement minor requirements
-    // Minor requirements need to be alternatives for the majors electives
-
-    const majorPlannedCourses = await prisma.plannedCourse.findMany({
-      where:{
-        coursePlanId: coursePlan.id,
-      },
-      include:{
-        alternativeCourses: true,
-      }
-    }) as PlannedCourse[];
-
-    const majorPlannedCourseElectives = majorPlannedCourses.filter(pc => pc.isElective);
-
-    const allCoursesInMajor= majorPlannedCourses.map(pc => pc.course);
-
-    const majorChoiceCourses = majorPlannedCourseElectives.filter(pc => pc.electiveType === ElectiveType.CHOICE);
-
-    const minorRequirements = (minor as Specialization & { requirements: Requirement[] }).requirements;
-
-
-    for (const requirement of minorRequirements){
-      const credits = requirement.credits;
-      const alternatives = (requirement as Requirement & { alternatives: Course[] }).alternatives;
-      const electiveCourse = (requirement as Requirement & { electiveCourse: Course }).electiveCourse;
-
-      let creditsInAlternatives = alternatives.reduce((accumulator, alternative) => accumulator + alternative.credits, 0);
-
-      // If all courses in the alternatives are required
-      if (creditsInAlternatives == credits){
-
-        for (const alternative of alternatives) {
-
-          if(allCoursesInMajor.includes(alternative) || majorChoiceCourses.map(pc => pc.course).includes(alternative)){
-            // Do not add course that is already in plan from major
-            continue;
-          }
-
-          // Find the smallest list of alternatives that contains the course among majorPlannedCourseElectives.alternatives
-          let chosenPlannedCourse: PlannedCourse | undefined;
-          let shortestListLength = Infinity;
-          for (const majorPlannedCourse of majorPlannedCourseElectives){
-            const alternativeCourses = majorPlannedCourse.alternativeCourses;
-            if(alternativeCourses){
-              if(alternativeCourses.length < shortestListLength && alternativeCourses.includes(alternative)){
-                chosenPlannedCourse = majorPlannedCourse;
-              }
-            }
-          }
-
-          // Update the chosen plannedCourse in the database
-          // Replace elective course with minor requirement
-          if(chosenPlannedCourse){
-            await prisma.plannedCourse.update({
-              where: { id: chosenPlannedCourse.id },
+        if(electiveCourse){
+          let elecCredits = 0;
+  
+          while(elecCredits < credits){
+            
+            const term = getRandomTerm(requirement, electiveCourse);
+  
+            await prisma.plannedCourse.create({
               data: {
+                term,
+                electiveType: electiveTypeStr as ElectiveType,
+                isElective: true,
                 course: {
                   connect: {
-                    id: alternative.id,
+                    id: electiveCourse.id,
                   },
                 },
-                isElective: false,
-                electiveType: undefined,
-
+                coursePlan: {
+                  connect: {
+                    id: coursePlan.id,
+                  },
+                },
+                requirement: {
+                  connect: {
+                    id: requirement.id,
+                  },
+                },
               },
             });
+            elecCredits += electiveCourse.credits || 0;
+
           }
         }
-       
-      }else if(electiveCourse){
-        // TODO
       }
     }
   }
+
+  // if(minor){
+  //   // TODO: Implement minor requirements
+  //   // Minor requirements need to be alternatives for the majors electives
+
+  //   const majorPlannedCourses = await prisma.plannedCourse.findMany({
+  //     where:{
+  //       coursePlanId: coursePlan.id,
+  //     },
+  //     include:{
+  //       alternativeCourses: true,
+  //     }
+  //   }) as PlannedCourse[];
+
+  //   const majorPlannedCourseElectives = majorPlannedCourses.filter(pc => pc.isElective);
+
+  //   const allCoursesInMajor = majorPlannedCourses.map(pc => pc.course);
+
+  //   const majorChoiceCourses = majorPlannedCourseElectives.filter(pc => pc.electiveType === ElectiveType.CHOICE);
+
+  //   const minorRequirements = (minor as Specialization & { requirements: Requirement[] }).requirements;
+
+
+  //   for (const requirement of minorRequirements){
+  //     const credits = requirement.credits;
+  //     const alternatives = (requirement as Requirement & { alternatives: Course[] }).alternatives;
+  //     const electiveCourse = (requirement as Requirement & { electiveCourse: Course }).electiveCourse;
+
+  //     let creditsInAlternatives = alternatives.reduce((accumulator, alternative) => accumulator + alternative.credits, 0);
+
+  //     // If all courses in the alternatives are required
+  //     if (creditsInAlternatives == credits){
+
+  //       for (const alternative of alternatives) {
+
+  //         if(allCoursesInMajor.includes(alternative) || majorChoiceCourses.map(pc => pc.course).includes(alternative)){
+  //           // Do not add course that is already in plan from major
+  //           continue;
+  //         }
+
+  //         // Find the smallest list of alternatives that contains the course among majorPlannedCourseElectives.alternatives
+  //         let chosenPlannedCourse: PlannedCourse | undefined;
+  //         let shortestListLength = Infinity;
+  //         for (const majorPlannedCourse of majorPlannedCourseElectives){
+  //           const alternativeCourses = majorPlannedCourse.alternativeCourses;
+  //           if(alternativeCourses){
+  //             if(alternativeCourses.length < shortestListLength && alternativeCourses.includes(alternative)){
+  //               chosenPlannedCourse = majorPlannedCourse;
+  //             }
+  //           }
+  //         }
+
+  //         // Update the chosen plannedCourse in the database
+  //         // Replace elective course with minor requirement
+  //         if(chosenPlannedCourse){
+  //           await prisma.plannedCourse.update({
+  //             where: { id: chosenPlannedCourse.id },
+  //             data: {
+  //               course: {
+  //                 connect: {
+  //                   id: alternative.id,
+  //                 },
+  //               },
+  //               isElective: false,
+  //               electiveType: undefined,
+  //             },
+  //           });
+  //         }
+  //       }
+       
+  //     }else if(electiveCourse){
+  //       // TODO
+  //     }
+  //   }
+  // }
 }
 
 function getRandomTerm(requirement:Requirement, alternative:Course){
@@ -351,24 +348,32 @@ export async function getAlternatives(plannedCourseId: string, searchTerm: strin
   const plannedCourse = await prisma.plannedCourse.findUnique({
     where: { id: plannedCourseId },
     include: {
-      alternativeCourses: true,
+      requirement: true,
     },
   });
-  return plannedCourse?.alternativeCourses.filter(
-    alt => !alt.isElectivePlaceholder && (
-      alt.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      alt.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
+  if (plannedCourse){
+    const alternatives = await getAlternativesForRequirement(plannedCourse.requirement.alternativeQuery);
+    return alternatives.filter(
+      alt => !alt.isElectivePlaceholder && (
+        alt.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        alt.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+  }
 }
 
 export async function getElectivePlaceholder(plannedCourseId: string) {
   const plannedCourse = await prisma.plannedCourse.findUnique({
     where: { id: plannedCourseId },
     include: {
-      alternativeCourses: true,
+      requirement: true,
     },
   });
-  return plannedCourse?.alternativeCourses.find(alt => alt.isElectivePlaceholder);
+  if (plannedCourse){
+    const elec = await getCourseByCode(plannedCourse.requirement.alternativeQuery);
+    if(!elec){
+      return await getCourseByCode("CHOICE");
+    }
+  }
 }
 

@@ -81,16 +81,12 @@ model Requirement {
   // Credits is used to find how many courses in the alternatives are needed to satisfy the requirement
   // For example if alternatives is [MATH101, MATH103, MATH123] each with 3 credits and credits is 6, then 2 courses are needed
   credits         Int
-  // Alternatives represent a list of courses that can be taken to satisfy the requirement
-  alternatives Course[] @relation("CourseRequirements")
+  alternativeQuery String @db.LongText
+
+  plannedCourses PlannedCourse[]
 
   year            Int
   programSpecific Boolean         @default(false)
-
-  // This is the special elective course that represnts a choice of courses eg:ELEC_UL_COSC or CHOICE
-  // This field is only populated when a requirement has more than 1 course in the Alternatives coloumn
-  electiveCourse   Course? @relation(fields: [electiveCourseId], references: [id])
-  electiveCourseId String?
 
   specialization   Specialization? @relation(fields: [specializationId], references: [id])
   specializationId String?
@@ -122,15 +118,14 @@ model PlannedCourse {
   id   String @id @default(cuid())
   term Int
 
+  requirement Requirement @relation(fields: [requirementId], references: [id])
+  requirementId String
+
   isElective Boolean @default(false)
   electiveType ElectiveType?
 
   course   Course @relation(fields: [courseId], references: [id])
   courseId String
-
-
-  // alternativeCourses only populated if this planned course represents an elective
-  alternativeCourses Course[] @relation("PlannedCourseAlternatives")
 
   coursePlan   CoursePlan @relation(fields: [coursePlanId], references: [id])
   coursePlanId String
@@ -162,11 +157,7 @@ model Course {
   faculty Faculty
   preRequisiteString String? @db.LongText
 
-  requirements Requirement[] @relation("CourseRequirements")
-
   plannedCourses PlannedCourse[]
-
-  alternativeCourses PlannedCourse[] @relation("PlannedCourseAlternatives")
 
   equivalentCourses Course[] @relation("EquivalentCourses")
   equivalentTo      Course[] @relation("EquivalentCourses")
@@ -178,5 +169,4 @@ model Course {
   excludedBy      Course[] @relation("ExcludedCourses")
 
   preRequisites Json          @default("{}")
-  requirement   Requirement[]
 }

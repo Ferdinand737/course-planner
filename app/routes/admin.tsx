@@ -209,15 +209,15 @@ export default function Admin() {
                 <br />
                 <hr />
                 <br />
-                <p>OpenAI is used to generate prerequisites based on the prerequisite string for each course</p>
+                <p>OpenAI is used to generate a pre-requisites json based on the pre-requisite string for each course</p>
+                <br />
+                <hr />
+                <br />
+                <p>If a row in a csv file already contains a pre-requisite json, it will not be generated.</p>
                 <br />
                 <hr />
                 <br />
                 <p>If ingestion is interrrupted, all courses before interuption will still be added to the database</p>
-                <br />
-                <hr />
-                <br />
-                <p>Course plans created before ingestion will not have access to new courses</p>
                 <br />
                 <hr />
                 <br />

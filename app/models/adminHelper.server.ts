@@ -21,7 +21,7 @@ export class HelperCourse{
     equ_arr: string[];
     co_req_arr: string[];
     pre_req_arr: string[];
-    pre_req_json: JSON;
+    pre_req_json: JSON | null;
 
 
     constructor(row:any){
@@ -129,145 +129,8 @@ export class HelperCourse{
         try{
             this.pre_req_json = JSON.parse(row["pre_req_json"])
         }catch(e){
-            this.pre_req_json = JSON.parse("{}")
+            this.pre_req_json = null
         }
     }
 }
 
-
-export class HelperRequirement{
-    constraintType: RequirementType
-    credits: number
-    year: number
-    programSpecific: boolean
-    alternativeString: string
-    alternatives: Course[]
-    electiveCourse: Course | null
-
-
-    constructor(row:any){
-        this.constraintType = RequirementType.AT_LEAST
-        this.credits = Number(row["Credits"])
-        this.year = Number(row["Year"])
-        this.programSpecific = row["ProgramSpecific"] === "1" ? true : false
-
-        this.alternativeString = row["Alternatives"]
-
-        this.alternatives = []
-        this.electiveCourse = null
-    }
-
-    // This function read the alternative string and populates the alternatives and electiveCourse fields
-    async populateAlternatives() {
-        // this.alternativeString is the 'Alternatives' column in the csv
-
-
-        let alternativeCourses:Course[] = [];
-
-    
-        if (!this.alternativeString.includes("ELEC")) {// Indicates either a single course or a list of courses. eg: "PHYS111;PHYS112"
-
-            const alternatives = this.alternativeString.split(";");
-            for (const alternative of alternatives) {
-
-                // Add a space to alternative course because that is how they are saved in the database
-                const courseCodeWithSpace = alternative.replace(/([A-Za-z])(\d)/g, '$1 $2');
-
-                // Find the course in the database based on the course code
-                const course = await prisma.course.findUnique({
-                    where: { code: courseCodeWithSpace }
-                });
-
-                if (course) {
-                    // If the course is found, add it to the list of alternative courses
-                    alternativeCourses.push(course);
-                }
-            }
-            // alternativeCourses will be the list of courses in he 'Alternatives' column in the csv file seperated by ;
-            this.alternatives = alternativeCourses;
-
-            // Only happens when there is more than one option in the alternatives
-            if (this.alternatives.length > 1){
-                // This finds the special elective placeholder course
-                this.electiveCourse = await prisma.course.findUnique({
-                    where: { code: "CHOICE" }
-                })
-            }
-
-        } else {
-            // Finds the special placholder course that matches the elective type eg: 'ELEC_UL_COSC'
-            this.electiveCourse = await prisma.course.findUnique({
-                where: { code: this.alternativeString.trim() }
-            })
-            // this converts the string into an array of queries eg: ['UL', 'COSC']
-            const queries = this.alternativeString.split("_").filter(q => q !== "" && q !== "ELEC").map(q => q.trim());
-
-            // This gets all the courses in the database 
-            let alternativeCourses = await prisma.course.findMany();
-            for (const q of queries) {
-                let queryResults:Course[] = [];
-
-                // Run a query based on the query string
-                if (q === "UL") {
-                    queryResults = await this.findUpperLevelCourses();
-                } else if (q === "SCI") {
-                    queryResults = await this.findScienceCourses();
-                } else if (q === "NONSCI") {
-                    // This needs to be fixed. Not all NONSCI courses are arts courses
-                    queryResults = await this.findArtsCourses();
-                } else if (q.length === 4) {
-                    queryResults = await this.findDiciplineCourses(q);
-                } else if (q.length === 1 && /^\d$/.test(q)) {
-                    queryResults = await this.findYearCourses(Number(q));
-                } else {
-                    console.log("Unknown query:" + q);
-                }
-                
-                // Only add the courses to the alternatives that are in the query results
-                alternativeCourses = alternativeCourses.filter(course => {
-                    return queryResults.some(queryCourse => {
-                        return queryCourse.code === course.code;
-                    });
-                });
-            }
-            this.alternatives = alternativeCourses;
-        }
-    }
-
-    async findUpperLevelCourses(): Promise<Course[]> {
-        const query = Prisma.sql`
-        SELECT * FROM \`Course\`
-        WHERE \`code\` REGEXP ' [3-5]'
-        `;
-        const courses = await prisma.$queryRaw<Course[]>(query);
-        return courses;
-    }
-    
-    async findYearCourses(year: number): Promise<Course[]> {
-        const stryear = ' ' + String(year)
-        const query = Prisma.sql`
-            SELECT * FROM \`Course\`
-            WHERE \`code\` REGEXP ${stryear}
-        `;
-        const courses = await prisma.$queryRaw<Course[]>(query);
-        return courses;
-    }
-
-    async findScienceCourses(){
-        return await prisma.course.findMany({
-            where: { faculty: Faculty.SCI }
-        });
-    }
-
-    async findArtsCourses(){
-        return await prisma.course.findMany({
-            where: { faculty: Faculty.ART }
-        });
-    }
-
-    async findDiciplineCourses(discipline:string){
-        return await prisma.course.findMany({
-            where: { code: { startsWith: discipline } }
-        });
-    }
-}
