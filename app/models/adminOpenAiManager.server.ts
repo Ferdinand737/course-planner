@@ -3,14 +3,11 @@ import OpenAI from "openai";
 export default class OpenAIRequester {
 
     openai;
-    numRequests: number;
 
-    constructor(key: string, numRequests: number) {
+    constructor(key: string) {
         this.openai = new OpenAI({
             apiKey: key,
         });
-        this.numRequests = numRequests;
-        console.log('Num requests: ', numRequests)
     }
     
     async sendRequestToOpenAI(setup:string, prompt:string)  {
@@ -31,8 +28,7 @@ export default class OpenAIRequester {
 
         let baseDelay = 1000;  // miliseconds per request
         let currentDelay = baseDelay; // Start with base delay
-        const maxDelay = (this.numRequests ? this.numRequests : 1) * baseDelay; // Max delay = numRequests *  baseDelay
-        
+        let maxDelay = 600000;     
         let jitter = maxDelay * Math.random() * 0.05;
         const delay = (Math.random() * maxDelay) + jitter; // choose random number between 0 and max delay then add jitter
 
@@ -40,8 +36,6 @@ export default class OpenAIRequester {
         while (attempt < maxAttempts) {
             try {
                 const response = await this.sendRequestToOpenAI(setup, prompt);
-                this.numRequests--;
-                console.log(`Attempt ${attempt + 1} succeeded, remaining requests: ${this.numRequests}`);
                 return response; // Success, return the response
             } catch (error) {
                 if (error.code === 'rate_limit_exceeded') {

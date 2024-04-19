@@ -34,6 +34,7 @@ model IngestedFile {
   filePath String
   name String
   ingested Boolean @default(false)
+  numNewCourses Int @default(0)
 }
 
 enum DegreeType {

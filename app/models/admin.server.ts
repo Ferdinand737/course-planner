@@ -7,6 +7,31 @@ import { HelperCourse, HelperRequirement } from "./adminHelper.server";
 import OpenAIRequester from "./adminOpenAiManager.server";
 import { Faculty, SpecializationType } from "~/interfaces";
 
+export async function getIngestedFiles(){
+  const allCourses = await prisma.course.findMany();
+
+  const currentIngestedFiles = await prisma.ingestedFile.findMany();
+
+  for (const file of currentIngestedFiles){
+    const filePath = file.filePath;
+    const helperCourses = await readCoursesCSV(filePath);
+    const helperCoursesToProcess = helperCourses.map((helperCourse: HelperCourse) => {
+      const course = allCourses.find((c) => c.code === helperCourse.code);
+      if (!course || helperCourse.year > course.year) {
+        return helperCourse;
+      } else {
+        return undefined;
+      }
+    }).filter(Boolean);
+    await prisma.ingestedFile.update({
+      where: {id: file.id},
+      data: {
+        numNewCourses: helperCoursesToProcess.length
+      }
+    })
+  }
+  return await prisma.ingestedFile.findMany();
+}
 
 export async function uploadCourseCSV(paths: string[]){
     const csvColNames =   ['course_code', 'campus', 'year', 'name', 'description', 'credits', 'is_honours', 'restrictions', 'equivalent_string', 'co-req_string', 'pre-req_string', 'courses_in_equivalent_string', 'courses_in_co-req_string', 'courses_in_pre-req_string', 'winter_term_1', 'winter_term_2', 'summer_term_1', 'summer_term_2', 'duration_terms', 'pre_req_json']
@@ -22,17 +47,13 @@ export async function uploadCourseCSV(paths: string[]){
         let ingestPath = ''
 
         if (fileType === '.csv'){
-            const isValid = await validateCSVColumns(filePath, ',',csvColNames);
-            if (!isValid) {
-                throw new Error('Invalid Columns in CSV file');
-            }
+            await validateCSVColumns(filePath, ',',csvColNames);
+
             ingestPath = filePath
 
         } else if (fileType === '.tsv'){
-            const isValid = await validateCSVColumns(filePath, '\t',tsvColNames);
-            if (!isValid) {
-              throw new Error('Invalid Columns in CSV file');
-            }
+            await validateCSVColumns(filePath, '\t',tsvColNames);
+        
             ingestPath = path.resolve(__dirname, `../public/uploaded-files/${fileNameWithoutExt}.csv`)
             processCsv(filePath, '\t')
                 .then(transformedData => {
@@ -51,10 +72,12 @@ export async function uploadCourseCSV(paths: string[]){
                 .catch(error => {
                     throw new Error('An error occurred while processing the TSV file');
                 });
+        }else{
+            throw new Error('Invalid file type. Files must be either .csv or .tsv');
         }
     
 
-    let allCourses = await prisma.course.findMany();
+    const allCourses = await prisma.course.findMany();
     const helperCourses = await readCoursesCSV(ingestPath);
     const helperCoursesToProcess = helperCourses.map((helperCourse: HelperCourse) => {
         const course = allCourses.find((c) => c.code === helperCourse.code);
@@ -67,9 +90,10 @@ export async function uploadCourseCSV(paths: string[]){
 
     await prisma.ingestedFile.create({
       data:{
-        name: path.basename(filePath),
+        name: path.basename(ingestPath),
         filePath: ingestPath,
-        ingested: false
+        ingested: false,
+        numNewCourses: helperCoursesToProcess.length
       }
     })
     newCourses.push(...helperCoursesToProcess);
@@ -77,46 +101,33 @@ export async function uploadCourseCSV(paths: string[]){
     return newCourses
 }
 
-export async function ingest(paths: string[], apiKey: string){
-    for (const filePath of paths){
-       
-        // get all courses from db
+export async function ingest(apiKey: string){
+  
+    const openAIRequester = new OpenAIRequester(apiKey);
 
-        // list of courses from csv
+    const filesToIngest = await prisma.ingestedFile.findMany({where: {ingested: false}});
 
-        // Use map instead of filter to keep the courses that meet the condition
+    const allCourses = await prisma.course.findMany();
+    
+    for (const file of filesToIngest){
+      const helperCourses = await readCoursesCSV(file.filePath);
+      const helperCoursesToProcess = helperCourses.map((helperCourse: HelperCourse) => {
+          const course = allCourses.find((c) => c.code === helperCourse.code);
+          if (!course || helperCourse.year > course.year) {
+            return helperCourse;
+          } else {
+            return undefined;
+          }
+      }).filter(Boolean);
 
-        const openAIRequester = new OpenAIRequester(apiKey, helperCoursesToProcess.length);
-        
-        // Wrap the OpenAI request in a Promise to ensure it's await-able
-        for (const helperCourse of helperCoursesToProcess) {
-          if (helperCourse) {
-            helperCourse.pre_req_json = await openAIRequester.getPreRequisiteJson(helperCourse.pre_req_str);
+      for (const helperCourse of helperCoursesToProcess) {
+        if (helperCourse) {
+          helperCourse.pre_req_json = await openAIRequester.getPreRequisiteJson(helperCourse.pre_req_str);
 
-            const course = allCourses.find(c => c.code === helperCourse.code);
-            if (!course || helperCourse.year > course.year){
-                if (!course){
-                  await prisma.course.create({
-                      data: {
-                        year: helperCourse.year,
-                        code: helperCourse.code,
-                        name: helperCourse.name,
-                        description: helperCourse.description,
-                        credits: helperCourse.credits,
-                        isHonours: helperCourse.isHonours,
-                        durationTerms: helperCourse.durationTerms,
-                        winterTerm1: helperCourse.winterTerm1,
-                        winterTerm2: helperCourse.winterTerm2,
-                        summerTerm1: helperCourse.summerTerm1,
-                        summerTerm2: helperCourse.summerTerm2,
-                        faculty: helperCourse.faculty,
-                        preRequisites: helperCourse.pre_req_json as any,//pre_req_json as any,
-                        preRequisiteString: helperCourse.pre_req_str,
-                      },
-                  });
-                } else if (helperCourse.year > course.year){
-                  await prisma.course.update({
-                    where: {id: course.id},
+          const course = allCourses.find(c => c.code === helperCourse.code);
+          if (!course || helperCourse.year > course.year){
+              if (!course){
+                await prisma.course.create({
                     data: {
                       year: helperCourse.year,
                       code: helperCourse.code,
@@ -130,49 +141,64 @@ export async function ingest(paths: string[], apiKey: string){
                       summerTerm1: helperCourse.summerTerm1,
                       summerTerm2: helperCourse.summerTerm2,
                       faculty: helperCourse.faculty,
-                      preRequisites: helperCourse.pre_req_json as any,
+                      preRequisites: helperCourse.pre_req_json as any,//pre_req_json as any,
                       preRequisiteString: helperCourse.pre_req_str,
                     },
-                  });
-                }
-            }
+                });
+              } else if (helperCourse.year > course.year){
+                await prisma.course.update({
+                  where: {id: course.id},
+                  data: {
+                    year: helperCourse.year,
+                    code: helperCourse.code,
+                    name: helperCourse.name,
+                    description: helperCourse.description,
+                    credits: helperCourse.credits,
+                    isHonours: helperCourse.isHonours,
+                    durationTerms: helperCourse.durationTerms,
+                    winterTerm1: helperCourse.winterTerm1,
+                    winterTerm2: helperCourse.winterTerm2,
+                    summerTerm1: helperCourse.summerTerm1,
+                    summerTerm2: helperCourse.summerTerm2,
+                    faculty: helperCourse.faculty,
+                    preRequisites: helperCourse.pre_req_json as any,
+                    preRequisiteString: helperCourse.pre_req_str,
+                  },
+                });
+              }
           }
         }
+      }
 
-
-        helperCoursesToProcess.forEach(async (helperCourse: HelperCourse|null) => {
-          if(helperCourse){
-            const course = await prisma.course.findFirst({where: {code: { equals: helperCourse.code }}});
-            const equivalentCourses = await prisma.course.findMany({where: {code: {in: helperCourse.equ_arr}}});
-            const coReqCourses = await prisma.course.findMany({where: {code: {in: helperCourse.co_req_arr}}});
-            
-            await prisma.course.update({
-              where: { id: course?.id },
-              data: {
-                equivalentCourses: {
-                  connect: equivalentCourses.map(course => ({ id: course.id }))
-                },
-                coRequisiteCourses: {
-                  connect: coReqCourses.map(course => ({ id: course.id }))
-                }
+      helperCoursesToProcess.forEach(async (helperCourse: HelperCourse|undefined) => {
+        if(helperCourse){
+          const course = await prisma.course.findFirst({where: {code: { equals: helperCourse.code }}});
+          const equivalentCourses = await prisma.course.findMany({where: {code: {in: helperCourse.equ_arr}}});
+          const coReqCourses = await prisma.course.findMany({where: {code: {in: helperCourse.co_req_arr}}});
+          
+          await prisma.course.update({
+            where: { id: course?.id },
+            data: {
+              equivalentCourses: {
+                connect: equivalentCourses.map(course => ({ id: course.id }))
+              },
+              coRequisiteCourses: {
+                connect: coReqCourses.map(course => ({ id: course.id }))
               }
-            });
-          }
-        })
+            }
+          });
+        }
+      })
 
-
-        await readSpecializationsCSVs();  
-
-        
-        await prisma.ingestedFile.create({
-          data:{
-            name: path.basename(filePath),
-            filePath: ingestPath,
-            ingested: fales
-          }
-        })
+      await prisma.ingestedFile.update({
+        where: {id: file.id},
+        data: {
+          ingested: true
+        }
+      })
     }
-
+    
+    await readSpecializationsCSVs();  
 }
 
 function parseSpecializationFromFileName(fileName: string) {
@@ -278,10 +304,6 @@ async function readSpecializationsCSVs() {
     }
   }
 }
-
-
-
-
 
 async function readCoursesCSV(csvPath: string): Promise<HelperCourse[]> {
   return new Promise((resolve, reject) => {
@@ -424,7 +446,6 @@ function validateCSVColumns(filePath: string, separator: string, expectedColumnN
           // Check if any expected columns are missing
           const missingColumns = expectedColumnNames.filter(colName => !columnNames.includes(colName));
           if (missingColumns.length > 0) {
-            console.log(`Missing expected columns: ${missingColumns.join(', ')}`);
             reject(new Error(`Missing expected columns: ${missingColumns.join(', ')}`));
           } else {
             console.log('CSV/TSV is valid');
