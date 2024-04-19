@@ -39,12 +39,9 @@ async function readElectiveTypesCSV() {
 async function seed() {
 
   await prisma.plannedCourse.deleteMany({});
-  await prisma.course.deleteMany({});
   await prisma.user.deleteMany({});
   await prisma.password.deleteMany({});
   await prisma.coursePlan.deleteMany({});
-  await prisma.requirement.deleteMany({});
-  await prisma.specialization.deleteMany({});
   await prisma.degree.deleteMany({});
   await prisma.ingestedFile.deleteMany({});
 
@@ -64,7 +61,6 @@ async function seed() {
   });
 
   await readElectiveTypesCSV();
-
 }
 
 seed()

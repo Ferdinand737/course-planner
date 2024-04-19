@@ -213,7 +213,7 @@ export default function Admin() {
                 <br />
                 <hr />
                 <br />
-                <p>If ingestion is interrrupted, all courses before interuption will still be added to db</p>
+                <p>If ingestion is interrrupted, all courses before interuption will still be added to the database</p>
                 <br />
                 <hr />
                 <br />

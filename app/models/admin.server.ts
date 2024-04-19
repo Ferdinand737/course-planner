@@ -5,7 +5,7 @@ import Papa from 'papaparse';
 import { prisma } from "~/db.server";
 import { HelperCourse, HelperRequirement } from "./adminHelper.server";
 import OpenAIRequester from "./adminOpenAiManager.server";
-import { Faculty, SpecializationType } from "~/interfaces";
+import { SpecializationType } from "~/interfaces";
 
 export async function getIngestedFiles(){
   const allCourses = await prisma.course.findMany();

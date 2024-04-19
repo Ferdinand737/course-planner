@@ -213,6 +213,7 @@ export class HelperRequirement{
                 } else if (q === "SCI") {
                     queryResults = await this.findScienceCourses();
                 } else if (q === "NONSCI") {
+                    // This needs to be fixed. Not all NONSCI courses are arts courses
                     queryResults = await this.findArtsCourses();
                 } else if (q.length === 4) {
                     queryResults = await this.findDiciplineCourses(q);
