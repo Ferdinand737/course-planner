@@ -37,7 +37,7 @@ def save(df):
     }).reset_index()
 
     current_date = datetime.date.today().strftime("%Y-%m-%d")
-    df.to_csv(f"data/courses_{current_date}.csv")
+    df.to_csv(f"courses_{current_date}.csv")
 
 
 def scrape_classes():

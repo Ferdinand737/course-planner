@@ -158,7 +158,7 @@ export default function Admin() {
                     <br />
                     <hr />
                     <br />
-                    <p>Instructions on how to generate a valid file with the scraper can be found <a href='link' className="text-blue-600 hover:text-blue-800 visited:text-purple-600">here</a></p>
+                    <p>Instructions on how to generate a valid file with the scraper can be found <a href='https://github.com/engasa/CoursePlannerWebDS/blob/main/scraping.md' className="text-blue-600 hover:text-blue-800 visited:text-purple-600">here</a></p>
                 </div>
     
                 {isUploading ? <LoadingSpinner /> : (
