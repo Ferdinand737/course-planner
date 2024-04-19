@@ -7,7 +7,7 @@
 
 **Node 21** was used for project creation and development
 
-- Start the Postgres Database in [Docker](https://www.docker.com/get-started):
+- Start the mysql Database in [Docker](https://www.docker.com/get-started):
 
   ```sh
   npm run docker
