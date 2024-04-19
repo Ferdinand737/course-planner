@@ -64,41 +64,4 @@ You can re-seed the database at any time with:
 # Resets database with example data.
 npm run seed
 ```
-
-## Data-Aquisition
-
-### NOT REQUIRED
-- **All data required to run the application is included in `courses.csv` in this repository.**
-- **Scraping and Parsing is only necessary if we loose the data or want to update course information.**
-
-### Scraping
-
-All course data is scraped from the ubc website directly with the python script found here: `/data-aquisition/scrape.py`
-
-- **Running the script takes over 20 minutes**
-- **[Chromedriver](https://googlechromelabs.github.io/chrome-for-testing/#stable) is required**
-  - The chromedriver executable must be in the smae folder as `scrape.py`
-  - Chromedriver **must** be the same version as chrome on your device (probably latest)
-- The script will update `courses.csv` with current courses
-- Running this command will set up the environment and start the scraper
-  ```bash
-  # ~/CoursePlannerWebDS/data-aquisition/
-  ./scrape.sh
-  ```
-  <strong style="color: orange;" >If you are not on UBC campus you will have to login with CWL when chromedriver opens the window</strong>
-  - The script has a built in delay of 1 minute to allow you to login before scraping
-
-### Parse Pre-Requisites
-OpenAi is used to parse the pre-requisite string using `/data-aquisition/parsePreRequisites.js`
-
-- **Running the script takes over 20 minutes**
-- Update `.env` with your OpenAi api key
-  - See `.env.example` in the repository
-- Running this command will update the `pre_req_json` for each row in `courses.csv`
-  ```bash
-  # ~/CoursePlannerWebDS/data-aquisition/
-  node parsePreRequisites.js
-  ```
-
-
-
+### [Scraping Guide](scraping.md)

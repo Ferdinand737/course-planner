@@ -149,7 +149,7 @@ model Course {
   name        String
   description String? @db.LongText
 
-  // There are special courses that are used as placeholders, these courses can be found in /data-aquisition/data/electiveTypes.csv
+  // There are special courses that are used as placeholders, these courses can be found in /data/electiveTypes.csv
   isElectivePlaceholder  Boolean @default(false)
 
   winterTerm1 Boolean @default(false)

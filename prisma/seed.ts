@@ -6,11 +6,11 @@ import path from "path";
 import csv from "csv-parser";
 
 /*
-  The code in this file reads the CSV files in the data-aquisition/data folder and seeds the database with the data.
+  The code in this file reads the CSV files in the /data folder and seeds the database with the data.
 */
 
 async function readElectiveTypesCSV() {
-  const csvPath = path.resolve(__dirname, "../data-aquisition/data/electiveTypes.csv");
+  const csvPath = path.resolve(__dirname, "../data/electiveTypes.csv");
   // populate the database with special placeholder courses for electives
   fs.createReadStream(csvPath)
       .pipe(csv())

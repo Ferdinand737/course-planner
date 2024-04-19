@@ -238,12 +238,12 @@ async function readSpecializationsCSVs() {
     "STAT": "Statistics",
   }
 
-  const directoryPath = path.resolve(__dirname, "../data-aquisition/data/degrees");
+  const directoryPath = path.resolve(__dirname, "../data/degrees");
   const fileNames = fs.readdirSync(directoryPath);
 
   for (const fileName of fileNames) {
 
-    // Create a specialization for each file in ../data-aquisition/data/degrees
+    // Create a specialization for each file in ../data/degrees
     const { discipline, specializationType } = parseSpecializationFromFileName(fileName);
 
     const hons = specializationType === SpecializationType.HONOURS ? " (Honours)" : "";
