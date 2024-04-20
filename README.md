@@ -1,7 +1,4 @@
-# Course Planner Web App
-
-
-## Initial Setup
+# Development Setup
 
 [Node Version Manager (nvm)](https://github.com/nvm-sh/nvm) is recomended.
 
@@ -64,4 +61,10 @@ You can re-seed the database at any time with:
 # Resets database with example data.
 npm run seed
 ```
-### [Scraping Guide](scraping.md)
+<br>
+<br>
+
+# Deployment
+
+
+<!-- ### [Scraping Guide](scraping.md) -->

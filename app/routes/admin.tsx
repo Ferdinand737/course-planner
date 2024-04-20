@@ -2,7 +2,7 @@ import { ActionFunctionArgs, LoaderFunctionArgs, redirect, json } from "@remix-r
 import { IngestedFile } from "~/interfaces";
 import { prisma } from "~/db.server";
 import { requireUserId } from "~/session.server";
-import { useLoaderData, useActionData } from "@remix-run/react";
+import { useLoaderData, useActionData, Form, useNavigation } from "@remix-run/react";
 import { getIngestedFiles, ingest, uploadCourseCSV } from "~/models/admin.server";
 import path from "path";
 import fs from 'fs/promises';
@@ -125,12 +125,13 @@ export default function Admin() {
     const newFiles = currentFiles.filter((file) => !file.ingested);
 
     const actionData = useActionData();
+
+    const navigation = useNavigation();
+    if(navigation.formAction){
+        return <LoadingSpinner />
+    }
     
     function UploadForm(){
-        // The loading wheel does not work, I don't know why
-        const fetcher = useFetcher();
-        const isUploading = fetcher.state === "submitting";
-    
         return(
             <div className="w-full md:w-1/2 p-2"> 
                 <h2 className="text-xl font-semibold mb-4 text-center">Step 1: Upload New Files</h2>
@@ -149,47 +150,39 @@ export default function Admin() {
                     <br />
                     <p>Instructions on how to generate a valid file with the scraper can be found <a href='https://github.com/engasa/CoursePlannerWebDS/blob/main/scraping.md' className="text-blue-600 hover:text-blue-800 visited:text-purple-600">here</a></p>
                 </div>
-    
-                {isUploading ? <LoadingSpinner /> : (
-                    <fetcher.Form method='post' encType="multipart/form-data" className="space-y-4">
-                        <input type="hidden" name="formId" value="upload" />
-                        <div>
-                            <input
-                                id="files"
-                                name="files"
-                                type="file"
-                                multiple
-                                accept=".csv,.tsv"
-                                required
-                                className="mt-2 block w-full text-sm text-gray-500
-                                    file:mr-4 file:py-2 file:px-4
-                                    file:rounded file:border-0
-                                    file:text-sm file:font-semibold
-                                    file:bg-gray-50 file:text-gray-700
-                                    hover:file:bg-gray-100"
-                            />
-                        </div>
-                        <button
-                            type="submit"
-                            className="inline-flex justify-center py-2 px-4 border border-transparent
-                                rounded-md shadow-sm text-sm font-medium text-white
-                                bg-blue-600 hover:bg-blue-700 focus:outline-none
-                                focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                            Upload Files
-                        </button>
-                    </fetcher.Form>
-                )}
-    
+                <Form method='post' encType="multipart/form-data" className="space-y-4">
+                    <input type="hidden" name="formId" value="upload" />
+                    <div>
+                        <input
+                            id="files"
+                            name="files"
+                            type="file"
+                            multiple
+                            accept=".csv,.tsv"
+                            required
+                            className="mt-2 block w-full text-sm text-gray-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-gray-50 file:text-gray-700
+                                hover:file:bg-gray-100"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        className="inline-flex justify-center py-2 px-4 border border-transparent
+                            rounded-md shadow-sm text-sm font-medium text-white
+                            bg-blue-600 hover:bg-blue-700 focus:outline-none
+                            focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                        Upload Files
+                    </button>
+                </Form>
             </div>
         )
     }
     
     function IngestForm(){
-        // The loading wheel does not work, I don't know why
-        const fetcher = useFetcher();
-        const isIngesting = fetcher.state === 'submitting';
-    
         return(
             <div className="w-full md:w-1/2 p-2">
             <h2 className="text-xl font-semibold mb-4 text-center">Step 2: Ingest Uploaded Files</h2>
@@ -216,36 +209,33 @@ export default function Admin() {
                 <br />
                 <p>This process can take a long time if there are many new courses</p>
             </div>
-    
-            {isIngesting ? <LoadingSpinner /> : (
-                <fetcher.Form method="post" encType="multipart/form-data" className="space-y-4">
-                    <input type="hidden" name="formId" value="ingest" />
-                    <div>
-                        <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700">
-                            OpenAI API Key
-                        </label>
-                        <input
-                            id="apiKey"
-                            name="apiKey"
-                            type="text"
-                            placeholder="Enter OpenAI API key"
-                            required
-                            className="mt-1 block w-full border border-gray-300 rounded-md
-                                shadow-sm placeholder-gray-400 focus:outline-none
-                                focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        className="inline-flex justify-center py-2 px-4 border border-transparent
-                            rounded-md shadow-sm text-sm font-medium text-white
-                            bg-blue-600 hover:bg-blue-700 focus:outline-none
-                            focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                        Ingest Files
-                    </button>
-                </fetcher.Form>
-            )}
+            <Form method="post" encType="multipart/form-data" className="space-y-4">
+                <input type="hidden" name="formId" value="ingest" />
+                <div>
+                    <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700">
+                        OpenAI API Key
+                    </label>
+                    <input
+                        id="apiKey"
+                        name="apiKey"
+                        type="text"
+                        placeholder="Enter OpenAI API key"
+                        required
+                        className="mt-1 block w-full border border-gray-300 rounded-md
+                            shadow-sm placeholder-gray-400 focus:outline-none
+                            focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    />
+                </div>
+                <button
+                    type="submit"
+                    className="inline-flex justify-center py-2 px-4 border border-transparent
+                        rounded-md shadow-sm text-sm font-medium text-white
+                        bg-blue-600 hover:bg-blue-700 focus:outline-none
+                        focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                    Ingest Files
+                </button>
+            </Form>
         </div>
         )
     }
