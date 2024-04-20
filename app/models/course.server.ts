@@ -31,7 +31,7 @@ export async function getAlternativesForRequirement(alternativeQuery: string) {
               alternativeCourses.push(course);
           }
       }
-      // alternativeCourses will be the list of courses in he 'Alternatives' column in the csv file seperated by ;
+      // alternativeCourses will be the list of courses in the 'Alternatives' column in the csv file seperated by ;
       return alternativeCourses;
 
   } else {

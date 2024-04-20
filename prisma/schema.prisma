@@ -79,8 +79,10 @@ model Requirement {
   constraintType  RequirementType @default(AT_LEAST)
 
   // Credits is used to find how many courses in the alternatives are needed to satisfy the requirement
-  // For example if alternatives is [MATH101, MATH103, MATH123] each with 3 credits and credits is 6, then 2 courses are needed
   credits         Int
+  // alternativQuery is a string found in /data/degrees/degree-name.csv that is used to find the courses that can satisfy the requirement
+  // see course.server.ts => getAlternativesForRequirement(string: alternativeQuery) for more information
+  // There exists a special placeholder course for all alternative queries that are not a list of courses
   alternativeQuery String @db.LongText
 
   plannedCourses PlannedCourse[]
@@ -109,8 +111,8 @@ model CoursePlan {
 }
 
 enum ElectiveType {
-  ELEC
-  CHOICE
+  ELEC // Coresponds to any special elective course found in /data/electiveTypes.csv except CHOICE
+  CHOICE // Coreesponds to a choice of electives found in /data/electiveTypes.csv as CHOICE
 }
 model PlannedCourse {
   // PlannedCourse represents a course that has been added to a course plan
@@ -121,6 +123,7 @@ model PlannedCourse {
   requirement Requirement @relation(fields: [requirementId], references: [id])
   requirementId String
 
+  // Only true if the course is an elective
   isElective Boolean @default(false)
   electiveType ElectiveType?
 
