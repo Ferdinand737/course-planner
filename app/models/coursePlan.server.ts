@@ -404,6 +404,7 @@ export async function createCoursePlan(planName: string, major: Specialization, 
       }
     }
   }
+  return coursePlan;
 }
 
 function getRandomTerm(requirement:Requirement, alternative:Course){
