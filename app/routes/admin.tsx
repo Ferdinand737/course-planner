@@ -244,16 +244,16 @@ export default function Admin() {
         <div className="flex items-center justify-center min-h-screen bg-gray-50"> 
             <div className="p-4 w-full max-w-4xl">
                 <>
-                    {actionData && actionData.status === 400 && (
+                    {actionData && (actionData as { status: number; message: string }).status === 400 && (
                         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-5 rounded" role="alert">
                             <strong className="font-bold">Error: </strong>
-                            <span className="block sm:inline">{actionData.errors.join(', ')}</span>
+                            <span className="block sm:inline">{(actionData as { status: number; message: string }).message}</span>
                         </div>
                     )}
-                    {actionData && actionData.status === 200 && (
+                    {actionData && (actionData as { status: number; message: string }).status === 200 && (
                         <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-5 rounded" role="alert">
                             <strong className="font-bold">Success: </strong>
-                            <span className="block sm:inline">{actionData.message}</span>
+                            <span className="block sm:inline">{(actionData as { status: number; message: string }).message}</span>
                         </div>
                     )}
                 </>

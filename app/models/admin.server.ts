@@ -5,6 +5,8 @@ import Papa from 'papaparse';
 import { prisma } from "~/db.server";
 import { HelperCourse } from "./adminHelper.server";
 import OpenAIRequester from "./adminOpenAiManager.server";
+import { Transform, finished, pipeline } from "stream";
+import { promisify } from "util";
 
 export async function getIngestedFiles(){
   const allCourses = await prisma.course.findMany();
@@ -54,7 +56,7 @@ export async function uploadCourseCSV(paths: string[]){
             await validateCSVColumns(filePath, '\t',tsvColNames);
         
             ingestPath = path.resolve(__dirname, `../public/uploaded-files/${fileNameWithoutExt}.csv`)
-            processCsv(filePath, '\t')
+            await processCsv(filePath, '\t')
                 .then(transformedData => {
                     writeCsv(transformedData, ingestPath);
                     console.log('CSV file was processed and saved successfully.');
@@ -228,99 +230,109 @@ async function readCoursesCSV(csvPath: string): Promise<HelperCourse[]> {
   });
 }
 
-function readCsv(filePath: string, delimiter: string): Promise<Papa.ParseResult<any>> {
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    return new Promise((resolve, reject) => {
-      Papa.parse(fileContent, {
-        header: true, // Set to true if the CSV file has a header row
-        delimiter: delimiter, // Set the delimiter used in the file
-        complete: resolve,
-        error: reject,
-      });
-    });
+function processRow(row: any) {
+  const course_code = row['Course Code'] + " " + row['Course Number'];
+  const campus = "UBCO";
+  const year = parseInt(row['Course Start Term'].replace(/\D/g, ''));
+  const name =  row['Course Title'];
+  const description = row['Course Description'];
+  const creditsList = row['Course Credit'].split(',');
+  const credits =  creditsList.length == 1 ? parseInt(creditsList[0]) : 3;
+  const is_honours = row['Course Title'].includes('Honours');
+  const restrictions = ''
+  const equivalent_string = ''
+  const co_req_string = row['Corequisite'];
+  const pre_req_string = row['Prerequisite'];
+  const courses_in_equivalent_string:string[] = []
+  const courses_in_co_req_array = co_req_string.match(/[A-Z]{4} \d{3}/g) || [];
+  const courses_in_pre_req_array = pre_req_string.match(/[A-Z]{4} \d{3}/g) || [];
+  const courses_in_co_req_string = courses_in_co_req_array.join(',');
+  const courses_in_pre_req_string = courses_in_pre_req_array.join(',');
+  const winter_term_1 = true
+  const winter_term_2 = true
+  const summer_term_1 = true
+  const summer_term_2 = true
+  const duration_terms = 1
+  const pre_req_json = ''
+
+  
+  return {
+    course_code,
+    campus,
+    year,
+    name,
+    description,
+    credits,
+    is_honours,
+    restrictions,
+    equivalent_string,
+    co_req_string,
+    pre_req_string,
+    courses_in_equivalent_string,
+    courses_in_co_req_string,
+    courses_in_pre_req_string,
+    winter_term_1,
+    winter_term_2,
+    summer_term_1,
+    summer_term_2,
+    duration_terms,
+    pre_req_json
+  };
 }
 
+const pipelineAsync = promisify(pipeline);
+
 async function processCsv(filePath: string, delimiter: string) {
-    try {
-        const parseResult = await readCsv(filePath, delimiter);
+  let latestCourseInstances = new Map();
+  const addedKeys = new Set();
+  const finalRows: any[] = [];
 
-        const result = parseResult.data.reduce((acc, course) => {
-            const key = `${course['Course Code']}|${course['Course Number']}`;
-            const year = parseInt(course['Course Start Term'].replace(/\D/g, ''));
-            
-            if (!acc.has(key) || acc.get(key) < year) {
-              acc.set(key, year);
-            }
-            
-            return acc;
-        }, new Map());
+  const findLatestYearStream = new Transform({
+    objectMode: true,
+    transform(chunk, encoding, callback) {
+      const key = `${chunk['Course Code']}|${chunk['Course Number']}`;
+      const year = parseInt(chunk['Course Start Term'].replace(/\D/g, ''), 10);
 
-        let addedKeys = new Set();
-        const rowsDropped = parseResult.data.filter(thisCourse => {
-          const key = `${thisCourse['Course Code']}|${thisCourse['Course Number']}`;
-          
-          if (!addedKeys.has(key) && result.get(key) === parseInt(thisCourse['Course Start Term'].replace(/\D/g, ''))) {
-            addedKeys.add(key);
-            return true;
-          }
-          
-          return false;
-        });
-          const finalData = rowsDropped.map(row => {
-            const course_code = row['Course Code'] + " " + row['Course Number'];
-            const campus = "UBCO";
-            const year = parseInt(row['Course Start Term'].replace(/\D/g, ''));
-            const name =  row['Course Title'];
-            const description = row['Course Description'];
-            const creditsList = row['Course Credit'].split(',');
-            const credits =  creditsList.length == 1 ? parseInt(creditsList[0]) : 3;
-            const is_honours = row['Course Title'].includes('Honours');
-            const restrictions = ''
-            const equivalent_string = ''
-            const co_req_string = row['Corequisite'];
-            const pre_req_string = row['Prerequisite'];
-            const courses_in_equivalent_string:string[] = []
-            const courses_in_co_req_array = co_req_string.match(/[A-Z]{4} \d{3}/g) || [];
-            const courses_in_pre_req_array = pre_req_string.match(/[A-Z]{4} \d{3}/g) || [];
-            const courses_in_co_req_string = courses_in_co_req_array.join(',');
-            const courses_in_pre_req_string = courses_in_pre_req_array.join(',');
-            const winter_term_1 = true
-            const winter_term_2 = true
-            const summer_term_1 = true
-            const summer_term_2 = true
-            const duration_terms = 1
-            const pre_req_json = ''
+      if (!latestCourseInstances.has(key) || latestCourseInstances.get(key) < year) {
+        latestCourseInstances.set(key, year);
+      }
+      callback();
+    },
+  });
 
-            
-            return {
-              course_code,
-              campus,
-              year,
-              name,
-              description,
-              credits,
-              is_honours,
-              restrictions,
-              equivalent_string,
-              co_req_string,
-              pre_req_string,
-              courses_in_equivalent_string,
-              courses_in_co_req_string,
-              courses_in_pre_req_string,
-              winter_term_1,
-              winter_term_2,
-              summer_term_1,
-              summer_term_2,
-              duration_terms,
-              pre_req_json
-            };
-          });
-          
-        return finalData;
-    } catch (error) {
-      console.log(error)
-    }
-  }
+  // First pass
+  await pipelineAsync(
+    fs.createReadStream(filePath),
+    csv({ separator: delimiter }),
+    findLatestYearStream
+  );
+
+  // Reinitialize read stream for the second pass
+  const readStream2 = fs.createReadStream(filePath);
+  const csvStream = csv({ separator: delimiter });
+
+  // Second pass
+  await pipelineAsync(
+    readStream2,
+    csvStream,
+    new Transform({
+      objectMode: true,
+      transform(chunk, encoding, callback) {
+        const key = `${chunk['Course Code']}|${chunk['Course Number']}`;
+        const year = parseInt(chunk['Course Start Term'].replace(/\D/g, ''), 10);
+        
+        if (latestCourseInstances.get(key) === year && !addedKeys.has(key)) {
+          finalRows.push(processRow(chunk)); // Your processRow function here
+          addedKeys.add(key);
+        }
+        
+        callback();
+      },
+    })
+  );
+
+  return finalRows;
+}
   
 
 
