@@ -64,7 +64,32 @@ npm run seed
 <br>
 <br>
 
+Updated courses can be scraped using a python script in `/scraper/`
+### [Scraping Guide](scraping.md)
+
+<br>
+<br>
+
 # Deployment
 
+All commands are to be run in repository on server found at `/srv/www/CoursePlannerWebDS`
 
-<!-- ### [Scraping Guide](scraping.md) -->
+1. **Pull From Github**
+    ```
+    git reset --hard
+    git pull
+    ```
+
+2. **Build**
+    ```
+    npm run build
+    ```
+3. **Start**
+    ```
+    pm2 restart course-planner
+    ```
+4. **Restart Apache**
+    ```
+    sudo systemctl restart httpd
+    ```
+    
