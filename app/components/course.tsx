@@ -93,7 +93,7 @@ export default function CourseComponent(props: {
     
         // Handling YEAR logic
         if (thisNodeSubType === "YEAR") {
-            const yearRequirement = Math.floor((thisPlannedCourse.term - 1) / 4) + 1 >= Number(node.value);
+            const yearRequirement = Math.floor((thisPlannedCourse.term) / 4) + 1 >= Number(node.value);
             if (!yearRequirement) failedConditions.push(`Year requirement ${node.value} not met`);
             return { result: yearRequirement, failedConditions };
         }

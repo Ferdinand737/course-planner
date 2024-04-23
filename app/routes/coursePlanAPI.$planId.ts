@@ -3,11 +3,6 @@ import { prisma } from "~/db.server";
 import { getCoursePlan, setCoursePlan } from "~/models/coursePlan.server";
 import { requireUserId } from "~/session.server";
 
-/*
-    I am certain this is not how remix is supposed to be used, but I am not sure how to do it properly.
-    Any file containing API in the name is being used to handle API requests.
-    This functionality is supposed to be handled by the routes themselves, but I am not sure how to do that.
-*/
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
     await requireUserId(request);

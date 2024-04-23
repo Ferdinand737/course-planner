@@ -18,8 +18,8 @@ export default function TermComponent(props: {
     const { term, coursePlan, selectCourse, hoverCourse, removeYear,updateElectiveCourse, hoveredCourseId, idx, groupedCourses } = props;
 
     const termNames = ["Winter 1", "Winter 2", "Summer 1", "Summer 2"];
-    const absoluteTerm = idx + 1;
-    const year = Math.floor((absoluteTerm - 1) / 4) + 1;
+    const absoluteTerm = idx;
+    const year = Math.floor((absoluteTerm) / 4) + 1;
     const showYear = idx % 4 === 0;
     const canRemove = groupedCourses.slice((year - 1) * 4, year * 4).flat().length == 0;
 
@@ -56,10 +56,10 @@ export default function TermComponent(props: {
                 >
                     <div className="flex items-baseline space-x-1">
                     <h1 className="text-lg font-semibold text-blue-600">
-                        {termNames[(absoluteTerm - 1) % 4].split(" ")[0]}
+                        {termNames[(absoluteTerm) % 4].split(" ")[0]}
                     </h1>
                     <h1 className="text-lg font-semibold text-blue-600">
-                        {termNames[(absoluteTerm - 1) % 4].split(" ")[1]}
+                        {termNames[(absoluteTerm) % 4].split(" ")[1]}
                     </h1>
                     </div>
                     <div className="flex flex-wrap justify-center gap-5 w-full">

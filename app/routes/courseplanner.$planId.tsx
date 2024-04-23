@@ -42,7 +42,7 @@ export default function CoursePlanPage(){
 
     const groupByTerm = (courses: PlannedCourse[], totalTerms: number): Record<number, PlannedCourse[]> => {
         const initialAcc: Record<number, PlannedCourse[]> = {};
-        for (let i = 1; i <= totalTerms; i++) {
+        for (let i = 0; i < totalTerms; i++) {
           initialAcc[i] = [];
         }
       
@@ -56,8 +56,7 @@ export default function CoursePlanPage(){
     useEffect(() => {
 
         if (coursePlan && coursePlan.plannedCourses) {
-            const numYears = coursePlan.numTerms / 4 ?? 0;
-            setGroupedCourses(Object.values(groupByTerm(coursePlan.plannedCourses, numYears * 4)));
+            setGroupedCourses(Object.values(groupByTerm(coursePlan.plannedCourses, coursePlan.numTerms)));
         }
     }, [coursePlan]);
 
@@ -111,7 +110,7 @@ export default function CoursePlanPage(){
     function updateTermNumbers(newGroupedCourses: PlannedCourse[][]){
         for(let i = 0; i < newGroupedCourses.length; i++){
             for(let j = 0; j < newGroupedCourses[i].length; j++){
-                newGroupedCourses[i][j].term = i + 1;
+                newGroupedCourses[i][j].term = i;
             }
         }
         return newGroupedCourses;
@@ -175,7 +174,7 @@ export default function CoursePlanPage(){
                 }
             }
         }
-        const term = newGroupedCourses[course.term - 1];
+        const term = newGroupedCourses[course.term];
         const index = term.findIndex((plannedCourse) => plannedCourse.id === course.id);
         term[index] = {
             ...course,

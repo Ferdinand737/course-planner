@@ -2,7 +2,8 @@
 import { DegreeType, ElectiveType, Requirement, Specialization, Course, PlannedCourse } from "../interfaces";
 import { prisma } from "~/db.server";
 import { getAlternativesForRequirement, getCourseByCode } from "./course.server";
-import { al } from "vitest/dist/reporters-5f784f42";
+import { N, al } from "vitest/dist/reporters-5f784f42";
+import { $Enums, Prisma } from "@prisma/client";
 
 export async function getUserCoursePlans(userId: string) {
   return await prisma.coursePlan.findMany({where: {userId}, orderBy: {createdAt: "desc"}});
@@ -170,12 +171,11 @@ export async function createCoursePlan(planName: string, major: Specialization, 
 
         for (const alternative of alternatives) {
 
-          const term = getRandomTerm(requirement, alternative);
 
           // Create the planned course in the database
           await prisma.plannedCourse.create({
             data: {
-              term,
+              term: 0,// term is calculated at the end
               course: {
                 connect: {
                   id: alternative.id,
@@ -208,11 +208,25 @@ export async function createCoursePlan(planName: string, major: Specialization, 
   
           while(elecCredits < credits){
             
-            const term = getRandomTerm(requirement, electiveCourse);
+            if (electiveTypeStr === ElectiveType.CHOICE.valueOf()) {
+              const otherOptions = await getAlternativesForRequirement(requirement.alternativeQuery);
+              for (const alt of otherOptions){
+                const courseInPlan = await prisma.plannedCourse.findFirst({
+                  where:{
+                    coursePlanId: coursePlan.id,
+                    courseId: alt.id,
+                  }
+                });
+                if(!courseInPlan){
+                  electiveCourse = alt;
+                  break;
+                }
+              }
+            }
   
             await prisma.plannedCourse.create({
               data: {
-                term,
+                term: 0,// term is calculated at the end
                 electiveType: electiveTypeStr as ElectiveType,
                 isElective: true,
                 course: {
@@ -318,7 +332,6 @@ export async function createCoursePlan(planName: string, major: Specialization, 
           // Update the chosen plannedCourse in the database
           // Replace elective course with minor requirement
           if(chosenPlannedCourse){
-            console.log(`Replacing ${chosenPlannedCourse.course?.code} with ${alternative.code}`)
             await prisma.plannedCourse.update({
               where: { id: chosenPlannedCourse.id },
               data: {
@@ -374,11 +387,25 @@ export async function createCoursePlan(planName: string, major: Specialization, 
               }
             }
 
+            if (electiveTypeStr === ElectiveType.CHOICE.valueOf()) {
+              const otherOptions = await getAlternativesForRequirement(requirement.alternativeQuery);
+              for (const alt of otherOptions){
+                const courseInPlan = await prisma.plannedCourse.findFirst({
+                  where:{
+                    coursePlanId: coursePlan.id,
+                    courseId: alt.id,
+                  }
+                });
+                if(!courseInPlan){
+                  electiveCourse = alt;
+                  break;
+                }
+              }
+            }
+
             // Update the chosen plannedCourse in the database
             // Replace elective course with minor requirement
             if(chosenPlannedCourse){
-              console.log(`Replacing ${chosenPlannedCourse.course?.code} with ${electiveCourse.code}`)
-              console.log(`Updating planned course ${chosenPlannedCourse.id}`)
               await prisma.plannedCourse.update({
                 where: { id: chosenPlannedCourse.id },
                 data: {
@@ -404,35 +431,161 @@ export async function createCoursePlan(planName: string, major: Specialization, 
       }
     }
   }
-  return coursePlan;
+
+  const plannedCourses = await prisma.plannedCourse.findMany({
+    where: { coursePlanId: coursePlan.id },
+    include: {
+      course: true,
+      requirement: true,
+      },
+    },
+  );
+
+  const graph = await buildGraph(plannedCourses);
+
+  await assignTerms(graph, plannedCourses);
+
+  return await getCoursePlan(coursePlan.id);
 }
 
-function getRandomTerm(requirement:Requirement, alternative:Course){
-  // if year is negative, choose a random year between 2 and 4
-  let year = requirement.year < 0 ? Math.floor(Math.random() * (3)) + 2 : requirement.year;
-  const baseTermNumber = (year - 1) * 4;
-            
-  let availableTerms = [];
-  if (alternative.winterTerm1) {
-    availableTerms.push(baseTermNumber + 1);
-  } 
-  if (alternative.winterTerm2) {
-    availableTerms.push(baseTermNumber + 2);
+async function assignTerms(graph:Map<PlannedCourse, PlannedCourse[]>, plannedCourses:PlannedCourse[], maxTermIdx = 15) {
+  const TERMS_PER_YEAR = 4;
+  const MAX_COURSES_PER_TERM = 5;
+
+  // Helper function to calculate the base term for a year
+  function baseTermForYear(year: number) {
+    if(year < 0){
+      return 0;
+    }
+    return (year - 1) * TERMS_PER_YEAR;
   }
-  if (alternative.summerTerm1) {
-    availableTerms.push(baseTermNumber + 3);
+
+  // Increment the term to the next available term that respects the constraints
+  function incrementTerm(term: number) {
+    do {
+      term++;
+    } while (term % TERMS_PER_YEAR > 1);  // Only terms 0, 1, 4, 5, ..., (winter terms) are allowed 
+    return term;
   }
-  if (alternative.summerTerm2) {
-    availableTerms.push(baseTermNumber + 4);
+
+  // Find the next available term for a course
+  function findNextAvailableTerm(startTerm: number, currentTerms: Map<number,PlannedCourse[]>, afterTerm = 0) {
+    startTerm = Math.max(startTerm, afterTerm);
+    while ((currentTerms.get(startTerm) ?? []).length >= MAX_COURSES_PER_TERM || startTerm % TERMS_PER_YEAR > 1) {
+      startTerm = incrementTerm(startTerm);
+    }
+    return Math.min(startTerm, maxTermIdx);// maxTermIdx=15 is the last term in a 4 year plan
   }
+
+  const terms = new Map<number, PlannedCourse[]>();
+  const courseToTerm = new Map(); // Mapping to keep track of each course's current term
+
+  // Helper function to move a course to a new term
+  async function moveCourseToNewTerm(course: PlannedCourse, currentTerm: number, targetTerm: number) {
+    (terms.get(currentTerm) ?? []).splice((terms.get(currentTerm) ?? []).indexOf(course), 1); // Remove course from current term
+    if (!terms.has(targetTerm)) {
+      terms.set(targetTerm, []); // Initialize array if new term doesn't exist
+    }
+    terms.get(targetTerm)?.push(course); // Fix: Add nullish coalescing operator
+    courseToTerm.set(course, targetTerm); // Update our course-to-term mapping
+
+    // Update the course with the new term in the database
+    await prisma.plannedCourse.update({
+      where: { id: course.id },
+      data: { term: targetTerm },
+    });
+  }
+
+  for (const plannedCourse of plannedCourses) {
+    let term = plannedCourse.requirement 
+      ? baseTermForYear(plannedCourse.requirement.year) 
+      : 0;
+
+    const parentTerm = [...graph.entries()]
+      .filter(([, children]) => children.includes(plannedCourse))
+      .map(([parent,]) => courseToTerm.get(parent))[0];
+    
+    // Ensure the planned course's term is greater than its parent's term, if it has one
+    term = findNextAvailableTerm(term, terms, parentTerm === undefined ? 0 : parentTerm + 1);
+
+    // Assign the planned course to the term and update the courseToTerm map
+    if (!terms.has(term)) {
+      terms.set(term, []);
+    }
+    terms.get(term)?.push(plannedCourse); // Fix: Add nullish coalescing operator
+    courseToTerm.set(plannedCourse, term); // Update our course-to-term mapping
+
+    // Update the term of the parent course in the database
+    await prisma.plannedCourse.update({
+      where: { id: plannedCourse.id },
+      data: { term },
+    });
+  }
+
+  // Now update children if necessary (This is done after assigning all parents)
+  for (const [parent, children] of graph.entries()) {
+    const parentTerm = courseToTerm.get(parent);
+    for (const child of children) {
+      if (parentTerm !== undefined) {
+        const childTerm = courseToTerm.get(child);
+        if (childTerm <= parentTerm) {
+          const newTermForChild = findNextAvailableTerm(childTerm, terms, parentTerm + 1);
+          await moveCourseToNewTerm(child, childTerm, newTermForChild);
+        }
+      }
+    }
+  }
+}
+
+async function buildGraph(plannedCourses: PlannedCourse[]) {
+  const graph = new Map<PlannedCourse, PlannedCourse[]>();
+  for (const plannedCourse of plannedCourses) {
+    if (plannedCourse.isElective && plannedCourse.electiveType === ElectiveType.ELEC) {
+      continue;
+    }
+    const course = plannedCourse.course;
+
+    if (course) {
+      if (course.preRequisites !== null) {
+        const thisCourseParents = await getCoursesFromPrereqs(course.preRequisiteString);
+        for (const parentCourse of thisCourseParents) {
+          const parentPlannedCourse = plannedCourses.find(pc => pc.course?.code === parentCourse.code);
+
+          if (!parentPlannedCourse) {
+            continue;
+          }
+
+          if (!graph.has(parentPlannedCourse)) {
+            graph.set(parentPlannedCourse, [plannedCourse]);
+          } else {
+            const existingCourses = graph.get(parentPlannedCourse);
+            if (existingCourses) {
+              existingCourses.push(plannedCourse);
+            }
+          }
+        }
+      }
+    }
+  }
+  return graph;
+}
+
+async function getCoursesFromPrereqs(prereqs: string|null) {
+  if (!prereqs) {
+    return [];
+  }
+
+  const codes = prereqs.match(/[A-Z]{4} \d{3}/g)|| [];
   
-  // If no terms were selected, default to the first term
-  if (availableTerms.length === 0) {
-    availableTerms.push(baseTermNumber + 1);
-  }
-  
-  // choose a random term from the available terms
-  return availableTerms[Math.floor(Math.random() * availableTerms.length)];
+  const courses = await prisma.course.findMany({
+    where: {
+      code: {
+        in: codes,
+      },
+    },
+  })
+
+  return courses
 }
 
 export async function getAlternatives(plannedCourseId: string, searchTerm: string) {

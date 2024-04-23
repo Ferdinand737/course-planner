@@ -322,7 +322,7 @@ async function processCsv(filePath: string, delimiter: string) {
         const year = parseInt(chunk['Course Start Term'].replace(/\D/g, ''), 10);
         
         if (latestCourseInstances.get(key) === year && !addedKeys.has(key)) {
-          finalRows.push(processRow(chunk)); // Your processRow function here
+          finalRows.push(processRow(chunk)); 
           addedKeys.add(key);
         }
         

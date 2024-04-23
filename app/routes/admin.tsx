@@ -6,7 +6,6 @@ import { useLoaderData, useActionData, Form, useNavigation } from "@remix-run/re
 import { getIngestedFiles, ingest, uploadCourseCSV } from "~/models/admin.server";
 import path from "path";
 import fs from 'fs/promises';
-import { useFetcher } from "@remix-run/react";
 import LoadingSpinner from "~/components/loading";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -25,7 +24,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
         const currentFiles = await getIngestedFiles()
         return json({ currentFiles });
     }catch(error){
-        return json({ status: 400, errors: ['Error getting ingested files'] }, { status: 400 });
+        return json({ status: 400, message: 'Error getting ingested files' }, { status: 400 });
     }
 
 }
@@ -45,7 +44,6 @@ export async function action({ request }: ActionFunctionArgs) {
 
     let formData = await request.formData();
     let formId = formData.get("formId");
-    const errors: string[] = [];
 
     switch(formId) {
         case 'upload':
@@ -60,34 +58,31 @@ export async function action({ request }: ActionFunctionArgs) {
 
                         const fileName = `${Date.now()}_${file.name}`;
                         const filePath = path.join(uploadPath, fileName);
-                        const fileBuffer = await file.arrayBuffer(); // Convert File to ArrayBuffer
+                        const fileBuffer = await file.arrayBuffer();
     
                         // Write the file to the filesystem
                         await fs.writeFile(filePath, Buffer.from(fileBuffer));
     
-                        // Add to paths array
                         paths.push(filePath);
                     }
                 }
             } catch (error) {
-                errors.push('Error uploading files');
+                return json({ status: 400, message: "Error Uploading files" }, { status: 400 });
             }
 
             try{
                 const newCourses = await uploadCourseCSV(paths)
                 return json({ status: 200, message: `File uploaded successfully. ${newCourses.length} new courses found` }, { status: 200 });
             }catch(error: any){
-                errors.push(error.message);
+                return json({ status: 400, message: error.message }, { status: 400 });
             }
             
-            return json({ status: 400, errors: errors }, { status: 400 });
         case 'ingest':
 
             const apiKey = formData.get('apiKey');
 
             if (typeof apiKey !== 'string') {
-                errors.push('OpenAI API Key is required');
-                return json({ status: 400, errors }, { status: 400 });
+                return json({ status: 400, message:'OpenAI API Key is required' }, { status: 400 });
             }
 
             try{
@@ -95,8 +90,7 @@ export async function action({ request }: ActionFunctionArgs) {
                 return json({ status: 200, message:"Files ingested successfully" }, { status: 200 });
             }
             catch(error: any){
-                errors.push(error.message);
-                return json({ status: 400, errors }, { status: 400 });
+                return json({ status: 400, message: error.message }, { status: 400 });
             }
             
         case 'delete':
