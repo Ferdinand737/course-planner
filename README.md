@@ -12,16 +12,16 @@
 
   > **Note:** The npm script will complete while Docker sets up the container in the background. Ensure that Docker has finished and your container is running before proceeding.
 
-- Initial setup:
-
-  ```sh
-  npm run setup
-  ```
-
 - Install packages:
 
   ```sh
   npm i
+  ```
+
+- Initial setup:
+
+  ```sh
+  npm run setup
   ```
 
 - Run the first build:
